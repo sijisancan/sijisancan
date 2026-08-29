@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四季三餐｜30桌二维码</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #eeeeee;
+  color: #222;
+  font-family:
+    Arial,
+    "Microsoft YaHei",
+    "PingFang SC",
+    sans-serif;
+}
+
+/* 顶部操作栏 */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 15px;
+}
+
+.toolbar h1 {
+  margin: 0;
+  font-size: 20px;
+  flex: 1;
+}
+
+.toolbar span {
+  color: #666;
+  font-size: 14px;
+}
+
+.print-btn {
+  border: 0;
+  background: #111111;
+  color: white;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.print-btn:hover {
+  background: #333333;
+}
+
+/* 页面容器 */
+.pages {
+  padding: 20px;
+}
+
+/* A4 */
+.page {
+  width: 210mm;
+  height: 297mm;
+  background: white;
+  margin: 0 auto 20px auto;
+  padding: 8mm;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, 1fr);
+
+  gap: 5mm;
+
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+
+  page-break-after: always;
+}
+
+/* 单个桌牌 */
+.table-card {
+  border: 1.5px solid #222;
+  border-radius: 8px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  padding: 5mm;
+}
+
+/* 店名 */
+.restaurant {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 2mm;
+}
+
+/* 桌号 */
+.table-number {
+  font-size: 25px;
+  font-weight: 800;
+  margin-bottom: 2mm;
+}
+
+/* 二维码 */
+.qr {
+  width: 48mm;
+  height: 48mm;
+  display: block;
+}
+
+/* 提示 */
+.tip {
+  margin-top: 2mm;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 屏幕预览时显示网址 */
+.url {
+  margin-top: 1.5mm;
+  font-size: 7px;
+  color: #888;
+  word-break: break-all;
+}
+
+/* 打印 */
+@media print {
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .pages {
+    padding: 0;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 8mm;
+
+    box-shadow: none;
+
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .table-card {
+    break-inside: avoid;
+  }
+
+  .url {
+    color: #888;
+  }
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="toolbar">
+  <h1>四季三餐｜30桌二维码</h1>
+
+<span>A4 每页8张 · 共30张</span>
+
+  <button class="print-btn" onclick="window.print()">
+    打印二维码
+  </button>
+</div>
+
+<div class="pages" id="pages"></div>
+
+<script>
+
+const pages = document.getElementById("pages");
+
+/*
+ * 每页8张
+ * 1-8
+ * 9-16
+ * 17-24
+ * 25-30
+ */
+
+for (let start = 1; start <= 30; start += 8) {
+
+  const page = document.createElement("div");
+  page.className = "page";
+
+  const end = Math.min(start + 7, 30);
+
+  for (let table = start; table <= end; table++) {
+
+    const card = document.createElement("div");
+    card.className = "table-card";
+
+    /* 店名 */
+    const restaurant = document.createElement("div");
+    restaurant.className = "restaurant";
+    restaurant.textContent = "四季三餐";
+
+    /* 桌号 */
+    const tableNumber = document.createElement("div");
+    tableNumber.className = "table-number";
+    tableNumber.textContent = table + "号桌";
+
+    /* 二维码 */
+    const qr = document.createElement("img");
+    qr.className = "qr";
+    qr.alt = table + "号桌二维码";
+
+    /*
+     * 使用你现在服务器上的二维码接口
+     */
+    qr.src = "/api/qr?table=" + table;
+
+    /* 扫码提示 */
+    const tip = document.createElement("div");
+    tip.className = "tip";
+    tip.textContent = "请扫码点餐";
+
+    /* 网址，仅用于预览检查 */
+    const url = document.createElement("div");
+    url.className = "url";
+    url.textContent =
+      window.location.origin + "/?table=" + table;
+
+    card.appendChild(restaurant);
+    card.appendChild(tableNumber);
+    card.appendChild(qr);
+    card.appendChild(tip);
+    card.appendChild(url);
+
+    page.appendChild(card);
+  }
+
+  pages.appendChild(page);
+}
+
+</script>
+
+</body>
+</html>
