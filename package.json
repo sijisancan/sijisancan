@@ -1,0 +1,11 @@
+{
+  "name": "sijisan-shan-ordering-v3",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "beef-noodle",
+    "name": "牛肉面",
+    "kr": "우육면",
+    "price": 11000,
+    "emoji": "🍜",
+    "on": true
+  },
+  {
+    "id": "huangmenji",
+    "name": "黄焖鸡",
+    "kr": "황먼지",
+    "price": 12000,
+    "emoji": "🍗",
+    "on": true
+  },
+  {
+    "id": "zhajiang",
+    "name": "北京炸酱面",
+    "kr": "베이징 자장면",
+    "price": 10000,
+    "emoji": "🍜",
+    "on": true
+  },
+  {
+    "id": "potsticker",
+    "name": "锅贴",
+    "kr": "군만두",
+    "price": 7000,
+    "emoji": "🥟",
+    "on": true
+  },
+  {
+    "id": "wonton",
+    "name": "馄饨",
+    "kr": "완탕",
+    "price": 7000,
+    "emoji": "🥟",
+    "on": true
+  },
+  {
+    "id": "cola",
+    "name": "可乐",
+    "kr": "콜라",
+    "price": 2000,
+    "emoji": "🥤",
+    "on": true
+  },
+  {
+    "id": "tsingtao",
+    "name": "青岛啤酒",
+    "kr": "칭따오 맥주",
+    "price": 5000,
+    "emoji": "🍺",
+    "on": true
+  }
+]
