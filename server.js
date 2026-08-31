@@ -1,76 +1,202 @@
-```js
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const url = require("url");
-const QRCode = require("qrcode");
 const crypto = require("crypto");
+const QRCode = require("qrcode");
 
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
-const DATA = (p) => path.join(ROOT, p);
+const PUBLIC = path.join(ROOT, "public");
+const UPLOADS = path.join(PUBLIC, "uploads");
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "123456";
-const POS_API_KEY = process.env.POS_API_KEY || "change-this-pos-key";
 
-const MENU_FILE = "menu.json";
-const ORDERS_FILE = "orders.json";
+const MENU_FILE = path.join(ROOT, "menu.json");
+const ORDERS_FILE = path.join(ROOT, "orders.json");
 
 const sessions = new Set();
 
-function read(p) {
+const MAX_BODY_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
+// =====================================================
+// 初始化
+// =====================================================
+
+if (!fs.existsSync(PUBLIC)) {
+  fs.mkdirSync(PUBLIC, { recursive: true });
+}
+
+if (!fs.existsSync(UPLOADS)) {
+  fs.mkdirSync(UPLOADS, { recursive: true });
+}
+
+// =====================================================
+// JSON
+// =====================================================
+
+function readJson(file, fallback) {
   try {
-    return JSON.parse(fs.readFileSync(DATA(p), "utf8"));
-  } catch (e) {
-    return [];
+    if (!fs.existsSync(file)) {
+      fs.writeFileSync(
+        file,
+        JSON.stringify(fallback, null, 2),
+        "utf8"
+      );
+
+      return fallback;
+    }
+
+    const text = fs.readFileSync(file, "utf8").trim();
+
+    if (!text) {
+      return fallback;
+    }
+
+    return JSON.parse(text);
+
+  } catch (error) {
+    console.error("读取 JSON 失败:", file);
+    console.error(error);
+
+    return fallback;
   }
 }
 
-function write(p, x) {
+function writeJson(file, data) {
   fs.writeFileSync(
-    DATA(p),
-    JSON.stringify(x, null, 2),
+    file,
+    JSON.stringify(data, null, 2),
     "utf8"
   );
 }
 
-function send(res, status, type, body, extraHeaders = {}) {
+// =====================================================
+// HTTP Response
+// =====================================================
+
+function send(res, status, type, body) {
+  if (res.headersSent) {
+    return;
+  }
+
   res.writeHead(status, {
     "Content-Type": type,
-    "Cache-Control": "no-store",
-    ...extraHeaders
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Credentials": "true",
+    "Cache-Control": "no-store"
   });
+
   res.end(body);
 }
 
-function json(res, status, obj, extraHeaders = {}) {
+function json(res, status, data) {
   send(
     res,
     status,
     "application/json; charset=utf-8",
-    JSON.stringify(obj),
-    extraHeaders
+    JSON.stringify(data)
   );
 }
 
+// =====================================================
+// Cookie / 登录
+// =====================================================
+
+function getCookie(req, name) {
+  const cookie = req.headers.cookie || "";
+
+  const match = cookie.match(
+    new RegExp("(?:^|;\\s*)" + name + "=([^;]+)")
+  );
+
+  return match ? match[1] : "";
+}
+
+function authed(req) {
+  const sid = getCookie(req, "sid");
+
+  return !!(
+    sid &&
+    sessions.has(sid)
+  );
+}
+
+// =====================================================
+// 普通 Body
+// =====================================================
+
 function parseBody(req) {
   return new Promise((resolve, reject) => {
-    let body = "";
+    let data = "";
 
     req.on("data", (chunk) => {
-      body += chunk;
+      data += chunk.toString("utf8");
 
-      if (body.length > 1024 * 1024) {
-        reject(new Error("body too large"));
+      if (data.length > MAX_BODY_SIZE) {
+        reject(new Error("请求数据太大"));
         req.destroy();
       }
     });
 
     req.on("end", () => {
+      if (!data.trim()) {
+        resolve({});
+        return;
+      }
+
+      const contentType = String(
+        req.headers["content-type"] || ""
+      ).toLowerCase();
+
       try {
-        resolve(JSON.parse(body || "{}"));
-      } catch (e) {
-        reject(e);
+        // JSON
+        if (
+          contentType.includes("application/json")
+        ) {
+          resolve(JSON.parse(data));
+          return;
+        }
+
+        // form-urlencoded
+        if (
+          contentType.includes(
+            "application/x-www-form-urlencoded"
+          )
+        ) {
+          const params = new URLSearchParams(data);
+          const result = {};
+
+          for (const [key, value] of params.entries()) {
+            result[key] = value;
+          }
+
+          resolve(result);
+          return;
+        }
+
+        // 兼容以前的请求
+        if (
+          data.trim().startsWith("{") ||
+          data.trim().startsWith("[")
+        ) {
+          resolve(JSON.parse(data));
+          return;
+        }
+
+        reject(
+          new Error(
+            "不支持的 Content-Type: " +
+            contentType
+          )
+        );
+
+      } catch (error) {
+        console.error("请求 Body 解析失败");
+        console.error("Content-Type:", contentType);
+        console.error("Body:", data.slice(0, 1000));
+
+        reject(error);
       }
     });
 
@@ -78,396 +204,967 @@ function parseBody(req) {
   });
 }
 
-function getCookie(req, name) {
-  const cookie = req.headers.cookie || "";
-  const reg = new RegExp(
-    "(?:^|;\\s*)" +
-      name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
-      "=([^;]+)"
+// =====================================================
+// multipart/form-data 解析
+//
+// 不依赖 multer / busboy，直接使用 Node.js 原生 Buffer。
+// 支持：
+// - 普通字段
+// - 图片文件
+// =====================================================
+
+function parseMultipart(req) {
+  return new Promise((resolve, reject) => {
+    const contentType = String(
+      req.headers["content-type"] || ""
+    );
+
+    const match = contentType.match(
+      /boundary=(?:"([^"]+)"|([^;]+))/i
+    );
+
+    if (!match) {
+      reject(
+        new Error(
+          "multipart/form-data 缺少 boundary"
+        )
+      );
+
+      return;
+    }
+
+    const boundary =
+      match[1] || match[2];
+
+    const boundaryBuffer =
+      Buffer.from("--" + boundary);
+
+    const chunks = [];
+    let totalSize = 0;
+
+    req.on("data", (chunk) => {
+      totalSize += chunk.length;
+
+      if (totalSize > MAX_BODY_SIZE) {
+        reject(
+          new Error(
+            "上传数据超过 15MB 限制"
+          )
+        );
+
+        req.destroy();
+        return;
+      }
+
+      chunks.push(chunk);
+    });
+
+    req.on("end", () => {
+      try {
+        const buffer =
+          Buffer.concat(chunks);
+
+        const result = {};
+        const files = {};
+
+        let position = 0;
+
+        while (position < buffer.length) {
+          const boundaryIndex =
+            buffer.indexOf(
+              boundaryBuffer,
+              position
+            );
+
+          if (boundaryIndex === -1) {
+            break;
+          }
+
+          position =
+            boundaryIndex +
+            boundaryBuffer.length;
+
+          // 最终 boundary
+          if (
+            buffer[position] === 45 &&
+            buffer[position + 1] === 45
+          ) {
+            break;
+          }
+
+          // 跳过 CRLF
+          if (
+            buffer[position] === 13 &&
+            buffer[position + 1] === 10
+          ) {
+            position += 2;
+          }
+
+          const headerEnd =
+            buffer.indexOf(
+              Buffer.from("\r\n\r\n"),
+              position
+            );
+
+          if (headerEnd === -1) {
+            break;
+          }
+
+          const headerText =
+            buffer
+              .slice(
+                position,
+                headerEnd
+              )
+              .toString("utf8");
+
+          const headers =
+            parseMultipartHeaders(
+              headerText
+            );
+
+          const contentStart =
+            headerEnd + 4;
+
+          const nextBoundary =
+            buffer.indexOf(
+              boundaryBuffer,
+              contentStart
+            );
+
+          if (nextBoundary === -1) {
+            break;
+          }
+
+          let contentEnd =
+            nextBoundary;
+
+          // 删除 boundary 前的 CRLF
+          if (
+            buffer[contentEnd - 2] === 13 &&
+            buffer[contentEnd - 1] === 10
+          ) {
+            contentEnd -= 2;
+          }
+
+          const content =
+            buffer.slice(
+              contentStart,
+              contentEnd
+            );
+
+          const disposition =
+            headers["content-disposition"] || "";
+
+          const nameMatch =
+            disposition.match(
+              /name="([^"]+)"/i
+            );
+
+          if (!nameMatch) {
+            position =
+              nextBoundary;
+
+            continue;
+          }
+
+          const fieldName =
+            nameMatch[1];
+
+          const fileMatch =
+            disposition.match(
+              /filename="([^"]*)"/i
+            );
+
+          if (fileMatch) {
+            const filename =
+              path.basename(
+                fileMatch[1] || ""
+              );
+
+            files[fieldName] = {
+              filename,
+              contentType:
+                headers["content-type"] ||
+                "application/octet-stream",
+              size:
+                content.length,
+              buffer:
+                content
+            };
+
+          } else {
+            result[fieldName] =
+              content.toString("utf8");
+          }
+
+          position =
+            nextBoundary;
+        }
+
+        resolve({
+          fields: result,
+          files
+        });
+
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    req.on("error", reject);
+  });
+}
+
+function parseMultipartHeaders(text) {
+  const headers = {};
+
+  const lines =
+    text.split(/\r\n/);
+
+  for (const line of lines) {
+    const index =
+      line.indexOf(":");
+
+    if (index === -1) {
+      continue;
+    }
+
+    const key =
+      line
+        .slice(0, index)
+        .trim()
+        .toLowerCase();
+
+    const value =
+      line
+        .slice(index + 1)
+        .trim();
+
+    headers[key] = value;
+  }
+
+  return headers;
+}
+
+// =====================================================
+// 图片
+// =====================================================
+
+function detectImageType(buffer) {
+  if (!buffer || buffer.length < 12) {
+    return null;
+  }
+
+  // PNG
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return {
+      ext: "png",
+      mime: "image/png"
+    };
+  }
+
+  // JPEG
+  if (
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
+    return {
+      ext: "jpg",
+      mime: "image/jpeg"
+    };
+  }
+
+  // GIF
+  if (
+    buffer.slice(0, 6).toString("ascii") ===
+    "GIF87a" ||
+    buffer.slice(0, 6).toString("ascii") ===
+    "GIF89a"
+  ) {
+    return {
+      ext: "gif",
+      mime: "image/gif"
+    };
+  }
+
+  // WEBP
+  if (
+    buffer.slice(0, 4).toString("ascii") ===
+      "RIFF" &&
+    buffer.slice(8, 12).toString("ascii") ===
+      "WEBP"
+  ) {
+    return {
+      ext: "webp",
+      mime: "image/webp"
+    };
+  }
+
+  return null;
+}
+
+function saveUploadedImage(file) {
+  if (!file) {
+    return "";
+  }
+
+  if (!file.buffer || !file.buffer.length) {
+    throw new Error("图片文件为空");
+  }
+
+  if (
+    file.buffer.length >
+    MAX_IMAGE_SIZE
+  ) {
+    throw new Error(
+      "图片不能超过 10MB"
+    );
+  }
+
+  const detected =
+    detectImageType(file.buffer);
+
+  if (!detected) {
+    throw new Error(
+      "只支持 JPG / PNG / GIF / WEBP 图片"
+    );
+  }
+
+  const randomName =
+    crypto.randomBytes(16).toString("hex") +
+    "." +
+    detected.ext;
+
+  const filename =
+    path.basename(randomName);
+
+  const target =
+    path.join(
+      UPLOADS,
+      filename
+    );
+
+  fs.writeFileSync(
+    target,
+    file.buffer
   );
 
-  const match = cookie.match(reg);
-  return match ? match[1] : null;
+  return "/uploads/" + filename;
 }
 
-function authed(req) {
-  const sid = getCookie(req, "sid");
-  return !!sid && sessions.has(sid);
+function deleteUploadedImage(imageUrl) {
+  if (!imageUrl) {
+    return;
+  }
+
+  if (
+    !String(imageUrl).startsWith(
+      "/uploads/"
+    )
+  ) {
+    return;
+  }
+
+  const filename =
+    path.basename(
+      String(imageUrl)
+    );
+
+  const file =
+    path.join(
+      UPLOADS,
+      filename
+    );
+
+  try {
+    if (fs.existsSync(file)) {
+      fs.unlinkSync(file);
+    }
+  } catch (error) {
+    console.error(
+      "删除旧图片失败:",
+      error
+    );
+  }
 }
 
-function posAuthed(req) {
-  const key =
-    req.headers["x-pos-api-key"] ||
-    req.headers["authorization"]?.replace(/^Bearer\s+/i, "");
+// =====================================================
+// 安全数值
+// =====================================================
 
-  return key && key === POS_API_KEY && POS_API_KEY !== "change-this-pos-key";
+function todayString() {
+  const now = new Date();
+
+  const y =
+    now.getFullYear();
+
+  const m =
+    String(
+      now.getMonth() + 1
+    ).padStart(2, "0");
+
+  const d =
+    String(
+      now.getDate()
+    ).padStart(2, "0");
+
+  return `${y}-${m}-${d}`;
 }
 
-function validTable(value) {
+function safeTable(value) {
   const n = Number(value);
 
-  if (!Number.isFinite(n)) return 1;
+  if (!Number.isFinite(n)) {
+    return 1;
+  }
 
   return Math.min(
     30,
-    Math.max(1, Math.floor(n))
+    Math.max(
+      1,
+      Math.floor(n)
+    )
   );
 }
 
-function cleanText(value, max = 200) {
-  return String(value ?? "")
-    .trim()
-    .slice(0, max);
-}
+function safeQty(value) {
+  const n = Number(value);
 
-function normalizeStatus(status) {
-  const allowed = [
-    "NEW",
-    "COOKING",
-    "DONE",
-    "CANCELLED"
-  ];
-
-  return allowed.includes(status)
-    ? status
-    : "NEW";
-}
-
-function normalizePaymentStatus(status) {
-  const allowed = [
-    "UNPAID",
-    "PAID",
-    "REFUNDED"
-  ];
-
-  return allowed.includes(status)
-    ? status
-    : "UNPAID";
-}
-
-function ensureOrderShape(order) {
-  if (!order.paymentStatus) {
-    order.paymentStatus = "UNPAID";
+  if (!Number.isFinite(n)) {
+    return 1;
   }
 
-  if (!order.status) {
-    order.status = "NEW";
-  }
-
-  if (!order.createdAt) {
-    order.createdAt = new Date().toISOString();
-  }
-
-  return order;
+  return Math.min(
+    99,
+    Math.max(
+      1,
+      Math.floor(n)
+    )
+  );
 }
 
-function loadOrders() {
-  const orders = read(ORDERS_FILE);
+function safePrice(value) {
+  const n = Number(value);
 
-  orders.forEach(ensureOrderShape);
+  if (!Number.isFinite(n)) {
+    return 0;
+  }
 
-  return orders;
+  return Math.max(
+    0,
+    Math.round(n)
+  );
 }
 
-function saveOrders(orders) {
-  write(ORDERS_FILE, orders);
+// =====================================================
+// 订单
+// =====================================================
+
+function orderDetail(order) {
+  const items =
+    Array.isArray(order.items)
+      ? order.items
+      : [];
+
+  return {
+    id:
+      order.id || "",
+
+    table:
+      safeTable(order.table),
+
+    type:
+      order.type === "TAKEOUT"
+        ? "TAKEOUT"
+        : "DINE_IN",
+
+    status:
+      order.status || "NEW",
+
+    note:
+      String(
+        order.note || ""
+      ),
+
+    createdAt:
+      order.createdAt || "",
+
+    doneAt:
+      order.doneAt || "",
+
+    items:
+      items.map((item) => {
+        const price =
+          safePrice(item.price);
+
+        const qty =
+          safeQty(item.qty);
+
+        return {
+          id:
+            item.id || "",
+
+          name:
+            item.name || "",
+
+          kr:
+            item.kr || "",
+
+          qty,
+
+          price,
+
+          subtotal:
+            price * qty
+        };
+      }),
+
+    total:
+      safePrice(order.total)
+  };
 }
 
 function createOrderId() {
   return (
-    Date.now().toString(36).toUpperCase() +
+    Date.now()
+      .toString(36)
+      .toUpperCase() +
     "-" +
-    crypto.randomBytes(3).toString("hex").toUpperCase()
+    crypto
+      .randomBytes(3)
+      .toString("hex")
+      .toUpperCase()
   );
 }
 
-function getPublicBase(req) {
-  const proto =
-    req.headers["x-forwarded-proto"] ||
-    "http";
-
-  const host = req.headers.host;
-
-  return `${proto}://${host}`;
-}
-
-function contentType(file) {
-  const ext = path.extname(file).toLowerCase();
-
-  const map = {
-    ".html": "text/html; charset=utf-8",
-    ".js": "text/javascript; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".json": "application/json; charset=utf-8",
-    ".svg": "image/svg+xml",
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".webp": "image/webp",
-    ".ico": "image/x-icon"
-  };
-
-  return map[ext] || "application/octet-stream";
-}
-
-function safePublicFile(pathname) {
-  let requested =
-    pathname === "/"
-      ? "/index.html"
-      : pathname === "/admin"
-      ? "/admin.html"
-      : pathname;
-
-  requested = path.normalize(requested);
-
-  if (requested.includes("..")) {
-    return null;
-  }
-
-  const publicRoot = path.resolve(
-    ROOT,
-    "public"
-  );
-
-  const file = path.resolve(
-    publicRoot,
-    "." + requested
-  );
-
-  if (
-    file !== publicRoot &&
-    !file.startsWith(publicRoot + path.sep)
-  ) {
-    return null;
-  }
-
-  return file;
-}
-
-const server = http.createServer(
-  async (req, res) => {
-    try {
-      const parsed = url.parse(
-        req.url,
-        true
+function createMenuId(
+  name,
+  menus
+) {
+  let base =
+    String(name || "")
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/g,
+        "-"
+      )
+      .replace(
+        /^-|-$/g,
+        ""
       );
 
-      const pathname = parsed.pathname;
+  if (!base) {
+    base = "menu";
+  }
 
-      /*
-       * ==============================
-       * 健康检查
-       * ==============================
-       */
+  let id = base;
+  let number = 2;
 
-      if (
-        req.method === "GET" &&
-        pathname === "/api/health"
-      ) {
-        return json(res, 200, {
-          ok: true,
-          version: "4.0.0",
-          service: "四季三餐"
-        });
-      }
+  while (
+    menus.some(
+      (item) =>
+        item.id === id
+    )
+  ) {
+    id =
+      base +
+      "-" +
+      number++;
+  }
 
-      /*
-       * ==============================
-       * 顾客菜单
-       * ==============================
-       */
+  return id;
+}
 
-      if (
-        req.method === "GET" &&
-        pathname === "/api/menu"
-      ) {
-        const menu = read(MENU_FILE)
-          .filter((x) => x.on !== false);
+// =====================================================
+// HTTP SERVER
+// =====================================================
 
-        return json(res, 200, menu);
-      }
+const server =
+  http.createServer(
+    async (req, res) => {
+      try {
+        const requestUrl =
+          new URL(
+            req.url,
+            `http://${
+              req.headers.host ||
+              "localhost"
+            }`
+          );
 
-      /*
-       * ==============================
-       * 老板登录
-       * ==============================
-       */
+        const p =
+          requestUrl.pathname;
 
-      if (
-        req.method === "POST" &&
-        pathname === "/api/login"
-      ) {
-        const body = await parseBody(req);
+        // =================================================
+        // OPTIONS
+        // =================================================
 
         if (
-          String(body.password || "") ===
-          ADMIN_PASSWORD
+          req.method === "OPTIONS"
         ) {
-          const sid =
-            crypto.randomBytes(32).toString("hex");
+          res.writeHead(204, {
+            "Access-Control-Allow-Origin":
+              "*",
 
-          sessions.add(sid);
+            "Access-Control-Allow-Credentials":
+              "true",
+
+            "Access-Control-Allow-Methods":
+              "GET,POST,DELETE,OPTIONS",
+
+            "Access-Control-Allow-Headers":
+              "Content-Type"
+          });
+
+          return res.end();
+        }
+
+        // =================================================
+        // 顾客：菜单
+        // =================================================
+
+        if (
+          req.method === "GET" &&
+          p === "/api/menu"
+        ) {
+          const menu =
+            readJson(
+              MENU_FILE,
+              []
+            );
 
           return json(
             res,
             200,
-            { ok: true },
-            {
+            menu.filter(
+              (item) =>
+                item.on !== false
+            )
+          );
+        }
+
+        // =================================================
+        // 老板登录
+        // =================================================
+
+        if (
+          req.method === "POST" &&
+          p === "/api/login"
+        ) {
+          const body =
+            await parseBody(req);
+
+          if (
+            String(
+              body.password || ""
+            ) ===
+            ADMIN_PASSWORD
+          ) {
+            const sid =
+              crypto
+                .randomBytes(24)
+                .toString("hex");
+
+            sessions.add(sid);
+
+            res.writeHead(200, {
               "Set-Cookie":
-                `sid=${sid}; HttpOnly; SameSite=Lax; Path=/`
+                "sid=" +
+                sid +
+                "; HttpOnly; SameSite=Lax; Path=/",
+
+              "Content-Type":
+                "application/json; charset=utf-8",
+
+              "Cache-Control":
+                "no-store"
+            });
+
+            return res.end(
+              JSON.stringify({
+                ok: true
+              })
+            );
+          }
+
+          return json(
+            res,
+            401,
+            {
+              error:
+                "密码错误"
             }
           );
         }
 
-        return json(res, 401, {
-          error: "密码错误"
-        });
-      }
+        // =================================================
+        // 老板退出
+        // =================================================
 
-      /*
-       * ==============================
-       * 老板退出
-       * ==============================
-       */
+        if (
+          req.method === "POST" &&
+          p === "/api/logout"
+        ) {
+          const sid =
+            getCookie(
+              req,
+              "sid"
+            );
 
-      if (
-        req.method === "POST" &&
-        pathname === "/api/logout"
-      ) {
-        const sid = getCookie(req, "sid");
-
-        if (sid) {
-          sessions.delete(sid);
-        }
-
-        return json(
-          res,
-          200,
-          { ok: true },
-          {
-            "Set-Cookie":
-              "sid=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/"
+          if (sid) {
+            sessions.delete(
+              sid
+            );
           }
-        );
-      }
 
-      /*
-       * ==============================
-       * 获取全部订单
-       * ==============================
-       */
+          res.writeHead(200, {
+            "Set-Cookie":
+              "sid=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/",
 
-      if (
-        req.method === "GET" &&
-        pathname === "/api/orders"
-      ) {
-        if (!authed(req)) {
-          return json(res, 401, {
-            error: "unauthorized"
+            "Content-Type":
+              "application/json; charset=utf-8"
           });
+
+          return res.end(
+            JSON.stringify({
+              ok: true
+            })
+          );
         }
 
-        return json(res, 200, loadOrders());
-      }
+        // =================================================
+        // 老板：全部订单
+        // =================================================
 
-      /*
-       * ==============================
-       * 顾客创建订单
-       * ==============================
-       */
-
-      if (
-        req.method === "POST" &&
-        pathname === "/api/orders"
-      ) {
-        try {
-          const body = await parseBody(req);
-
-          const menu = read(MENU_FILE);
-
-          const rawItems = Array.isArray(body.items)
-            ? body.items
-            : [];
-
-          const items = rawItems
-            .map((item) => {
-              const menuItem = menu.find(
-                (m) => m.id === item.id
-              );
-
-              if (!menuItem) {
-                return null;
+        if (
+          req.method === "GET" &&
+          p === "/api/orders"
+        ) {
+          if (!authed(req)) {
+            return json(
+              res,
+              401,
+              {
+                error:
+                  "unauthorized"
               }
+            );
+          }
 
-              if (menuItem.on === false) {
-                return null;
+          const orders =
+            readJson(
+              ORDERS_FILE,
+              []
+            );
+
+          return json(
+            res,
+            200,
+            orders.map(
+              orderDetail
+            )
+          );
+        }
+
+        // =================================================
+        // 老板：今日订单
+        // =================================================
+
+        if (
+          req.method === "GET" &&
+          p === "/api/orders/today"
+        ) {
+          if (!authed(req)) {
+            return json(
+              res,
+              401,
+              {
+                error:
+                  "unauthorized"
               }
+            );
+          }
 
-              const qty = Math.min(
-                99,
-                Math.max(
-                  1,
-                  Math.floor(Number(item.qty) || 1)
+          const today =
+            todayString();
+
+          const orders =
+            readJson(
+              ORDERS_FILE,
+              []
+            );
+
+          const todayOrders =
+            orders.filter(
+              (order) =>
+                String(
+                  order.createdAt ||
+                  ""
+                ).startsWith(
+                  today
                 )
-              );
+            );
 
-              return {
-                id: menuItem.id,
-                name: menuItem.name,
-                kr: menuItem.kr || "",
-                emoji:
-                  menuItem.emoji || "🍽️",
-                qty,
-                price: Number(menuItem.price) || 0
-              };
-            })
-            .filter(Boolean);
+          return json(
+            res,
+            200,
+            todayOrders.map(
+              orderDetail
+            )
+          );
+        }
+
+        // =================================================
+        // 顾客：提交订单
+        // =================================================
+
+        if (
+          req.method === "POST" &&
+          p === "/api/orders"
+        ) {
+          const body =
+            await parseBody(req);
+
+          const menu =
+            readJson(
+              MENU_FILE,
+              []
+            );
+
+          if (
+            !Array.isArray(
+              body.items
+            )
+          ) {
+            return json(
+              res,
+              400,
+              {
+                error:
+                  "订单商品数据无效"
+              }
+            );
+          }
+
+          const items =
+            body.items
+              .map(
+                (item) => {
+                  const menuItem =
+                    menu.find(
+                      (m) =>
+                        String(m.id) ===
+                        String(item.id)
+                    );
+
+                  if (!menuItem) {
+                    return null;
+                  }
+
+                  if (
+                    menuItem.on ===
+                    false
+                  ) {
+                    return null;
+                  }
+
+                  const qty =
+                    safeQty(
+                      item.qty
+                    );
+
+                  const price =
+                    safePrice(
+                      menuItem.price
+                    );
+
+                  return {
+                    id:
+                      menuItem.id,
+
+                    name:
+                      menuItem.name,
+
+                    kr:
+                      menuItem.kr ||
+                      "",
+
+                    qty,
+
+                    price,
+
+                    subtotal:
+                      price * qty
+                  };
+                }
+              )
+              .filter(Boolean);
 
           if (!items.length) {
-            return json(res, 400, {
-              error: "订单不能为空"
-            });
+            return json(
+              res,
+              400,
+              {
+                error:
+                  "购物车为空"
+              }
+            );
           }
 
-          const total = items.reduce(
-            (sum, item) =>
-              sum +
-              item.price * item.qty,
-            0
-          );
+          const total =
+            items.reduce(
+              (sum, item) =>
+                sum +
+                item.subtotal,
+              0
+            );
 
-          const orders = loadOrders();
+          const orders =
+            readJson(
+              ORDERS_FILE,
+              []
+            );
 
           const order = {
-            id: createOrderId(),
+            id:
+              createOrderId(),
 
-            table: validTable(body.table),
+            table:
+              safeTable(
+                body.table
+              ),
 
             items,
 
             total,
 
-            note: cleanText(
-              body.note,
-              200
-            ),
+            note:
+              String(
+                body.note || ""
+              ).slice(
+                0,
+                200
+              ),
 
             type:
-              body.type === "TAKEOUT"
+              body.type ===
+              "TAKEOUT"
                 ? "TAKEOUT"
                 : "DINE_IN",
 
-            status: "NEW",
-
-            paymentStatus: "UNPAID",
-
-            paymentMethod: null,
-
-            paymentTransactionId: null,
-
-            paidAt: null,
-
-            closedAt: null,
+            status:
+              "NEW",
 
             createdAt:
               new Date().toISOString()
@@ -475,494 +1172,560 @@ const server = http.createServer(
 
           orders.push(order);
 
-          saveOrders(orders);
-
-          return json(res, 201, order);
-        } catch (e) {
-          console.error(e);
-
-          return json(res, 400, {
-            error: "invalid order"
-          });
-        }
-      }
-
-      /*
-       * ==============================
-       * 修改订单制作状态
-       *
-       * NEW
-       * COOKING
-       * DONE
-       * CANCELLED
-       * ==============================
-       */
-
-      if (
-        req.method === "POST" &&
-        pathname.match(
-          /^\/api\/orders\/[^/]+\/status$/
-        )
-      ) {
-        if (!authed(req)) {
-          return json(res, 401, {
-            error: "unauthorized"
-          });
-        }
-
-        const id =
-          pathname.split("/")[3];
-
-        const body =
-          await parseBody(req);
-
-        const status =
-          normalizeStatus(body.status);
-
-        const orders = loadOrders();
-
-        const order = orders.find(
-          (x) => x.id === id
-        );
-
-        if (!order) {
-          return json(res, 404, {
-            error: "订单不存在"
-          });
-        }
-
-        order.status = status;
-
-        saveOrders(orders);
-
-        return json(res, 200, order);
-      }
-
-      /*
-       * ==============================
-       * 手动结账
-       *
-       * 给老板后台使用
-       * ==============================
-       */
-
-      if (
-        req.method === "POST" &&
-        pathname.match(
-          /^\/api\/orders\/[^/]+\/pay$/
-        )
-      ) {
-        if (!authed(req)) {
-          return json(res, 401, {
-            error: "unauthorized"
-          });
-        }
-
-        const id =
-          pathname.split("/")[3];
-
-        const body =
-          await parseBody(req);
-
-        const method =
-          cleanText(
-            body.paymentMethod ||
-              "MANUAL",
-            30
+          writeJson(
+            ORDERS_FILE,
+            orders
           );
 
-        const transactionId =
-          cleanText(
-            body.transactionId ||
-              "",
-            100
+          return json(
+            res,
+            201,
+            orderDetail(order)
           );
-
-        const orders = loadOrders();
-
-        const order = orders.find(
-          (x) => x.id === id
-        );
-
-        if (!order) {
-          return json(res, 404, {
-            error: "订单不存在"
-          });
         }
+
+        // =================================================
+        // 修改订单状态
+        // =================================================
 
         if (
-          order.paymentStatus ===
-          "PAID"
+          req.method === "POST" &&
+          /^\/api\/orders\/[^/]+\/status$/.test(
+            p
+          )
         ) {
-          return json(res, 200, order);
-        }
+          if (!authed(req)) {
+            return json(
+              res,
+              401,
+              {
+                error:
+                  "unauthorized"
+              }
+            );
+          }
 
-        order.paymentStatus = "PAID";
-        order.paymentMethod = method;
+          const id =
+            p.split("/")[3];
 
-        order.paymentTransactionId =
-          transactionId || null;
+          const body =
+            await parseBody(req);
 
-        order.paidAt =
-          new Date().toISOString();
+          const allowed = [
+            "NEW",
+            "COOKING",
+            "DONE"
+          ];
 
-        /*
-         * 结账后订单自动结束
-         */
-        order.closedAt =
-          new Date().toISOString();
+          if (
+            !allowed.includes(
+              body.status
+            )
+          ) {
+            return json(
+              res,
+              400,
+              {
+                error:
+                  "无效订单状态"
+              }
+            );
+          }
 
-        /*
-         * 如果还没完成制作，
-         * 付款并不强制把厨房状态改成 DONE。
-         *
-         * paymentStatus 与 status 分开保存。
-         */
+          const orders =
+            readJson(
+              ORDERS_FILE,
+              []
+            );
 
-        saveOrders(orders);
+          const order =
+            orders.find(
+              (item) =>
+                String(
+                  item.id
+                ) ===
+                String(id)
+            );
 
-        return json(res, 200, {
-          ok: true,
-          order
-        });
-      }
+          if (!order) {
+            return json(
+              res,
+              404,
+              {
+                error:
+                  "订单不存在"
+              }
+            );
+          }
 
-      /*
-       * ==============================
-       * POS 支付回调接口
-       *
-       * 以后真正接 POS 时使用
-       *
-       * Header:
-       * X-POS-API-Key
-       *
-       * Body:
-       * {
-       *   orderId,
-       *   paymentMethod,
-       *   transactionId
-       * }
-       * ==============================
-       */
+          order.status =
+            body.status;
 
-      if (
-        req.method === "POST" &&
-        pathname ===
-          "/api/pos/payment"
-      ) {
-        if (!posAuthed(req)) {
-          return json(res, 401, {
-            error:
-              "POS authorization failed"
-          });
-        }
+          if (
+            body.status ===
+              "DONE" &&
+            !order.doneAt
+          ) {
+            order.doneAt =
+              new Date().toISOString();
+          }
 
-        const body =
-          await parseBody(req);
+          if (
+            body.status !==
+            "DONE"
+          ) {
+            delete order.doneAt;
+          }
 
-        const orderId =
-          cleanText(
-            body.orderId,
-            100
+          writeJson(
+            ORDERS_FILE,
+            orders
           );
 
-        if (!orderId) {
-          return json(res, 400, {
-            error:
-              "orderId required"
-          });
-        }
-
-        const orders = loadOrders();
-
-        const order = orders.find(
-          (x) => x.id === orderId
-        );
-
-        if (!order) {
-          return json(res, 404, {
-            error: "订单不存在"
-          });
-        }
-
-        /*
-         * 防止 POS 重复回调造成重复结账
-         */
-        if (
-          order.paymentStatus ===
-          "PAID"
-        ) {
-          return json(res, 200, {
-            ok: true,
-            alreadyPaid: true,
-            order
-          });
-        }
-
-        order.paymentStatus = "PAID";
-
-        order.paymentMethod =
-          cleanText(
-            body.paymentMethod ||
-              "POS",
-            30
+          return json(
+            res,
+            200,
+            orderDetail(order)
           );
-
-        order.paymentTransactionId =
-          cleanText(
-            body.transactionId ||
-              "",
-            100
-          ) || null;
-
-        order.paidAt =
-          new Date().toISOString();
-
-        /*
-         * POS 支付成功
-         * 自动关闭订单
-         */
-        order.closedAt =
-          new Date().toISOString();
-
-        saveOrders(orders);
-
-        return json(res, 200, {
-          ok: true,
-          message:
-            "POS支付成功，订单已结账",
-          order
-        });
-      }
-
-      /*
-       * ==============================
-       * POS 查询订单
-       *
-       * 以后 POS 可以根据订单号查询
-       * ==============================
-       */
-
-      if (
-        req.method === "GET" &&
-        pathname.match(
-          /^\/api\/pos\/orders\/[^/]+$/
-        )
-      ) {
-        if (!posAuthed(req)) {
-          return json(res, 401, {
-            error:
-              "POS authorization failed"
-          });
         }
 
-        const id =
-          pathname.split("/")[4];
-
-        const orders = loadOrders();
-
-        const order = orders.find(
-          (x) => x.id === id
-        );
-
-        if (!order) {
-          return json(res, 404, {
-            error: "订单不存在"
-          });
-        }
-
-        return json(res, 200, order);
-      }
-
-      /*
-       * ==============================
-       * POS 退款
-       * ==============================
-       */
-
-      if (
-        req.method === "POST" &&
-        pathname.match(
-          /^\/api\/pos\/orders\/[^/]+\/refund$/
-        )
-      ) {
-        if (!posAuthed(req)) {
-          return json(res, 401, {
-            error:
-              "POS authorization failed"
-          });
-        }
-
-        const id =
-          pathname.split("/")[4];
-
-        const body =
-          await parseBody(req);
-
-        const orders = loadOrders();
-
-        const order = orders.find(
-          (x) => x.id === id
-        );
-
-        if (!order) {
-          return json(res, 404, {
-            error: "订单不存在"
-          });
-        }
+        // =================================================
+        // 删除订单
+        // =================================================
 
         if (
-          order.paymentStatus !==
-          "PAID"
+          req.method === "DELETE" &&
+          /^\/api\/orders\/[^/]+$/.test(
+            p
+          )
         ) {
-          return json(res, 400, {
-            error:
-              "该订单尚未付款"
-          });
-        }
+          if (!authed(req)) {
+            return json(
+              res,
+              401,
+              {
+                error:
+                  "unauthorized"
+              }
+            );
+          }
 
-        order.paymentStatus =
-          "REFUNDED";
+          const id =
+            p.split("/")[3];
 
-        order.refundedAt =
-          new Date().toISOString();
+          const orders =
+            readJson(
+              ORDERS_FILE,
+              []
+            );
 
-        order.refundTransactionId =
-          cleanText(
-            body.transactionId ||
-              "",
-            100
-          ) || null;
+          const newOrders =
+            orders.filter(
+              (order) =>
+                String(
+                  order.id
+                ) !==
+                String(id)
+            );
 
-        saveOrders(orders);
+          if (
+            newOrders.length ===
+            orders.length
+          ) {
+            return json(
+              res,
+              404,
+              {
+                error:
+                  "订单不存在"
+              }
+            );
+          }
 
-        return json(res, 200, {
-          ok: true,
-          order
-        });
-      }
-
-      /*
-       * ==============================
-       * 删除订单
-       * ==============================
-       */
-
-      if (
-        req.method === "DELETE" &&
-        pathname.match(
-          /^\/api\/orders\/[^/]+$/
-        )
-      ) {
-        if (!authed(req)) {
-          return json(res, 401, {
-            error: "unauthorized"
-          });
-        }
-
-        const id =
-          pathname.split("/")[3];
-
-        const orders =
-          loadOrders().filter(
-            (x) => x.id !== id
+          writeJson(
+            ORDERS_FILE,
+            newOrders
           );
 
-        saveOrders(orders);
-
-        return json(res, 200, {
-          ok: true
-        });
-      }
-
-      /*
-       * ==============================
-       * 获取完整菜单
-       * ==============================
-       */
-
-      if (
-        req.method === "GET" &&
-        pathname === "/api/menu/all"
-      ) {
-        if (!authed(req)) {
-          return json(res, 401, {
-            error: "unauthorized"
-          });
+          return json(
+            res,
+            200,
+            {
+              ok: true
+            }
+          );
         }
 
-        return json(
-          res,
-          200,
-          read(MENU_FILE)
-        );
-      }
+        // =================================================
+        // 后台：全部菜单
+        // =================================================
 
-      /*
-       * ==============================
-       * 新增 / 修改菜单
-       * ==============================
-       */
+        if (
+          req.method === "GET" &&
+          p === "/api/menu/all"
+        ) {
+          if (!authed(req)) {
+            return json(
+              res,
+              401,
+              {
+                error:
+                  "unauthorized"
+              }
+            );
+          }
 
-      if (
-        req.method === "POST" &&
-        pathname === "/api/menu"
-      ) {
-        if (!authed(req)) {
-          return json(res, 401, {
-            error: "unauthorized"
-          });
+          return json(
+            res,
+            200,
+            readJson(
+              MENU_FILE,
+              []
+            )
+          );
         }
 
-        const body =
-          await parseBody(req);
+        // =================================================
+        // 后台：新增 / 修改菜单
+        //
+        // 同时支持：
+        // application/json
+        // multipart/form-data
+        // =================================================
 
-        const menu =
-          read(MENU_FILE);
+        if (
+          req.method === "POST" &&
+          p === "/api/menu"
+        ) {
+          if (!authed(req)) {
+            return json(
+              res,
+              401,
+              {
+                error:
+                  "unauthorized"
+              }
+            );
+          }
 
-        /*
-         * 新增
-         */
-        if (!body.id) {
+          const contentType =
+            String(
+              req.headers[
+                "content-type"
+              ] || ""
+            ).toLowerCase();
+
+          let body = {};
+          let uploadedFile =
+            null;
+
+          if (
+            contentType.includes(
+              "multipart/form-data"
+            )
+          ) {
+            const parsed =
+              await parseMultipart(
+                req
+              );
+
+            body =
+              parsed.fields;
+
+            uploadedFile =
+              parsed.files.image ||
+              null;
+
+          } else {
+            body =
+              await parseBody(req);
+          }
+
+          const menus =
+            readJson(
+              MENU_FILE,
+              []
+            );
+
+          // =================================================
+          // 修改现有菜品
+          // =================================================
+
+          if (body.id) {
+            const index =
+              menus.findIndex(
+                (item) =>
+                  String(
+                    item.id
+                  ) ===
+                  String(
+                    body.id
+                  )
+              );
+
+            if (index < 0) {
+              return json(
+                res,
+                404,
+                {
+                  error:
+                    "菜单不存在"
+                }
+              );
+            }
+
+            const old =
+              menus[index];
+
+            if (
+              body.name !==
+              undefined
+            ) {
+              old.name =
+                String(
+                  body.name
+                ).trim();
+            }
+
+            if (
+              body.kr !==
+              undefined
+            ) {
+              old.kr =
+                String(
+                  body.kr
+                ).trim();
+            }
+
+            if (
+              body.category !==
+              undefined
+            ) {
+              old.category =
+                String(
+                  body.category
+                ).trim();
+            }
+
+            if (
+              body.price !==
+              undefined
+            ) {
+              old.price =
+                safePrice(
+                  body.price
+                );
+            }
+
+            if (
+              body.emoji !==
+              undefined
+            ) {
+              old.emoji =
+                String(
+                  body.emoji ||
+                    "🍽️"
+                ).trim();
+            }
+
+            if (
+              body.on !==
+              undefined
+            ) {
+              old.on =
+                body.on === true ||
+                body.on === "true" ||
+                body.on === 1 ||
+                body.on === "1";
+            }
+
+            if (
+              body.image !==
+              undefined
+            ) {
+              old.image =
+                String(
+                  body.image || ""
+                ).trim();
+            }
+
+            // 如果 JSON 请求直接指定图片地址
+            // 则保存地址
+            //
+            // 如果 multipart 上传了新图片，
+            // 则下面会覆盖旧地址。
+
+            if (uploadedFile) {
+              try {
+                const oldImage =
+                  old.image;
+
+                const newImage =
+                  saveUploadedImage(
+                    uploadedFile
+                  );
+
+                old.image =
+                  newImage;
+
+                if (
+                  oldImage &&
+                  oldImage !==
+                    newImage
+                ) {
+                  deleteUploadedImage(
+                    oldImage
+                  );
+                }
+
+              } catch (error) {
+                return json(
+                  res,
+                  400,
+                  {
+                    error:
+                      error.message ||
+                      "图片上传失败"
+                  }
+                );
+              }
+            }
+
+            writeJson(
+              MENU_FILE,
+              menus
+            );
+
+            return json(
+              res,
+              200,
+              old
+            );
+          }
+
+          // =================================================
+          // 新增菜品
+          // =================================================
+
+          const name =
+            String(
+              body.name || ""
+            ).trim();
+
+          const kr =
+            String(
+              body.kr || ""
+            ).trim();
+
+          const category =
+            String(
+              body.category || ""
+            ).trim();
+
+          const price =
+            safePrice(
+              body.price
+            );
+
+          const emoji =
+            String(
+              body.emoji ||
+                "🍽️"
+            ).trim();
+
+          if (!name) {
+            return json(
+              res,
+              400,
+              {
+                error:
+                  "请填写中文菜名"
+              }
+            );
+          }
+
+          if (!kr) {
+            return json(
+              res,
+              400,
+              {
+                error:
+                  "请填写韩文菜名"
+              }
+            );
+          }
+
+          if (!category) {
+            return json(
+              res,
+              400,
+              {
+                error:
+                  "请填写菜品分类"
+              }
+            );
+          }
+
+          const id =
+            createMenuId(
+              name,
+              menus
+            );
+
+          let image = "";
+
+          if (uploadedFile) {
+            try {
+              image =
+                saveUploadedImage(
+                  uploadedFile
+                );
+            } catch (error) {
+              return json(
+                res,
+                400,
+                {
+                  error:
+                    error.message ||
+                    "图片上传失败"
+                }
+              );
+            }
+          }
+
           const item = {
-            id:
-              "menu-" +
-              Date.now().toString(36),
+            id,
 
-            name:
-              cleanText(
-                body.name ||
-                  "新菜品",
-                100
-              ),
+            name,
 
-            kr:
-              cleanText(
-                body.kr || "",
-                100
-              ),
+            kr,
 
-            price: Math.max(
-              0,
-              Number(body.price) || 0
-            ),
+            price,
 
-            emoji:
-              cleanText(
-                body.emoji ||
-                  "🍽️",
-                10
-              ),
+            emoji,
+
+            image,
 
             on:
-              body.on !== false
+              !(
+                body.on ===
+                  false ||
+                body.on ===
+                  "false" ||
+                body.on ===
+                  0 ||
+                body.on ===
+                  "0"
+              ),
+
+            category
           };
 
-          menu.push(item);
+          menus.push(item);
 
-          write(
+          writeJson(
             MENU_FILE,
-            menu
+            menus
           );
 
           return json(
@@ -972,298 +1735,472 @@ const server = http.createServer(
           );
         }
 
-        /*
-         * 修改
-         */
+        // =================================================
+        // 更换已有菜品图片
+        //
+        // POST /api/menu/:id/image
+        // =================================================
 
-        const index =
-          menu.findIndex(
-            (x) =>
-              x.id === body.id
-          );
-
-        if (index < 0) {
-          return json(res, 404, {
-            error:
-              "菜品不存在"
-          });
-        }
-
-        menu[index].name =
-          cleanText(
-            body.name ||
-              menu[index].name,
-            100
-          );
-
-        menu[index].kr =
-          cleanText(
-            body.kr ||
-              menu[index].kr ||
-              "",
-            100
-          );
-
-        menu[index].price =
-          Math.max(
-            0,
-            Number(
-              body.price ??
-                menu[index].price
-            ) || 0
-          );
-
-        menu[index].emoji =
-          cleanText(
-            body.emoji ||
-              menu[index].emoji ||
-              "🍽️",
-            10
-          );
-
-        menu[index].on =
-          body.on !== undefined
-            ? !!body.on
-            : !!menu[index].on;
-
-        write(
-          MENU_FILE,
-          menu
-        );
-
-        return json(
-          res,
-          200,
-          menu[index]
-        );
-      }
-
-      /*
-       * ==============================
-       * QR二维码
-       *
-       * /api/qr?table=1
-       * ==============================
-       */
-
-      if (
-        req.method === "GET" &&
-        pathname === "/api/qr"
-      ) {
-        const table =
-          validTable(
-            parsed.query.table
-          );
-
-        const base =
-          getPublicBase(req);
-
-        const target =
-          `${base}/?table=${table}`;
-
-        const svg =
-          await QRCode.toString(
-            target,
-            {
-              type: "svg",
-              margin: 2,
-              width: 360
-            }
-          );
-
-        return send(
-          res,
-          200,
-          "image/svg+xml; charset=utf-8",
-          svg
-        );
-      }
-
-      /*
-       * ==============================
-       * 订单统计
-       * ==============================
-       */
-
-      if (
-        req.method === "GET" &&
-        pathname === "/api/stats"
-      ) {
-        if (!authed(req)) {
-          return json(res, 401, {
-            error: "unauthorized"
-          });
-        }
-
-        const orders =
-          loadOrders();
-
-        const today =
-          new Date()
-            .toISOString()
-            .slice(0, 10);
-
-        const todayOrders =
-          orders.filter(
-            (x) =>
-              x.createdAt &&
-              x.createdAt.startsWith(
-                today
-              )
-          );
-
-        const paidOrders =
-          orders.filter(
-            (x) =>
-              x.paymentStatus ===
-              "PAID"
-          );
-
-        const todayPaid =
-          todayOrders.filter(
-            (x) =>
-              x.paymentStatus ===
-              "PAID"
-          );
-
-        const completed =
-          orders.filter(
-            (x) =>
-              x.status === "DONE"
-          );
-
-        return json(
-          res,
-          200,
-          {
-            version: "4.0.0",
-
-            orders:
-              orders.length,
-
-            todayOrders:
-              todayOrders.length,
-
-            todaySales:
-              todayOrders.reduce(
-                (sum, x) =>
-                  sum +
-                  Number(
-                    x.total || 0
-                  ),
-                0
-              ),
-
-            todayPaidOrders:
-              todayPaid.length,
-
-            todayPaidSales:
-              todayPaid.reduce(
-                (sum, x) =>
-                  sum +
-                  Number(
-                    x.total || 0
-                  ),
-                0
-              ),
-
-            paidOrders:
-              paidOrders.length,
-
-            paidSales:
-              paidOrders.reduce(
-                (sum, x) =>
-                  sum +
-                  Number(
-                    x.total || 0
-                  ),
-                0
-              ),
-
-            completedOrders:
-              completed.length,
-
-            completedSales:
-              completed.reduce(
-                (sum, x) =>
-                  sum +
-                  Number(
-                    x.total || 0
-                  ),
-                0
-              )
-          }
-        );
-      }
-
-      /*
-       * ==============================
-       * 静态网页
-       * ==============================
-       */
-
-      const file =
-        safePublicFile(
-          pathname
-        );
-
-      if (!file) {
-        return send(
-          res,
-          403,
-          "text/plain; charset=utf-8",
-          "Forbidden"
-        );
-      }
-
-      fs.readFile(
-        file,
-        (error, data) => {
-          if (error) {
-            return send(
+        if (
+          req.method === "POST" &&
+          /^\/api\/menu\/[^/]+\/image$/.test(
+            p
+          )
+        ) {
+          if (!authed(req)) {
+            return json(
               res,
-              404,
-              "text/plain; charset=utf-8",
-              "Not found"
+              401,
+              {
+                error:
+                  "unauthorized"
+              }
             );
           }
+
+          const contentType =
+            String(
+              req.headers[
+                "content-type"
+              ] || ""
+            ).toLowerCase();
+
+          if (
+            !contentType.includes(
+              "multipart/form-data"
+            )
+          ) {
+            return json(
+              res,
+              400,
+              {
+                error:
+                  "请使用图片上传方式"
+              }
+            );
+          }
+
+          const parsed =
+            await parseMultipart(
+              req
+            );
+
+          const file =
+            parsed.files.image;
+
+          if (!file) {
+            return json(
+              res,
+              400,
+              {
+                error:
+                  "没有找到图片文件"
+              }
+            );
+          }
+
+          const id =
+            p.split("/")[3];
+
+          const menus =
+            readJson(
+              MENU_FILE,
+              []
+            );
+
+          const item =
+            menus.find(
+              (menuItem) =>
+                String(
+                  menuItem.id
+                ) ===
+                String(id)
+            );
+
+          if (!item) {
+            return json(
+              res,
+              404,
+              {
+                error:
+                  "菜单不存在"
+              }
+            );
+          }
+
+          try {
+            const oldImage =
+              item.image || "";
+
+            const newImage =
+              saveUploadedImage(
+                file
+              );
+
+            item.image =
+              newImage;
+
+            writeJson(
+              MENU_FILE,
+              menus
+            );
+
+            if (
+              oldImage &&
+              oldImage !==
+                newImage
+            ) {
+              deleteUploadedImage(
+                oldImage
+              );
+            }
+
+            return json(
+              res,
+              200,
+              item
+            );
+
+          } catch (error) {
+            return json(
+              res,
+              400,
+              {
+                error:
+                  error.message ||
+                  "照片上传失败"
+              }
+            );
+          }
+        }
+
+        // =================================================
+        // 二维码
+        // =================================================
+
+        if (
+          req.method === "GET" &&
+          p === "/api/qr"
+        ) {
+          const table =
+            safeTable(
+              requestUrl.searchParams.get(
+                "table"
+              )
+            );
+
+          const protocol =
+            String(
+              req.headers[
+                "x-forwarded-proto"
+              ] ||
+                "http"
+            ).split(",")[0];
+
+          const host =
+            req.headers.host ||
+            "localhost:" +
+              PORT;
+
+          const base =
+            protocol +
+            "://" +
+            host;
+
+          const target =
+            base +
+            "/?table=" +
+            table;
+
+          const svg =
+            await QRCode.toString(
+              target,
+              {
+                type: "svg",
+                margin: 2,
+                width: 360
+              }
+            );
 
           return send(
             res,
             200,
-            contentType(file),
-            data
+            "image/svg+xml; charset=utf-8",
+            svg
           );
         }
-      );
-    } catch (error) {
-      console.error(
-        "SERVER ERROR:",
-        error
-      );
 
-      return json(
-        res,
-        500,
-        {
-          error:
-            "服务器内部错误"
+        // =================================================
+        // 后台统计
+        // =================================================
+
+        if (
+          req.method === "GET" &&
+          p === "/api/stats"
+        ) {
+          if (!authed(req)) {
+            return json(
+              res,
+              401,
+              {
+                error:
+                  "unauthorized"
+              }
+            );
+          }
+
+          const orders =
+            readJson(
+              ORDERS_FILE,
+              []
+            );
+
+          const today =
+            todayString();
+
+          const todayOrders =
+            orders.filter(
+              (order) =>
+                String(
+                  order.createdAt ||
+                    ""
+                ).startsWith(
+                  today
+                )
+            );
+
+          const newOrders =
+            todayOrders.filter(
+              (order) =>
+                order.status ===
+                "NEW"
+            ).length;
+
+          const cookingOrders =
+            todayOrders.filter(
+              (order) =>
+                order.status ===
+                "COOKING"
+            ).length;
+
+          const doneOrders =
+            todayOrders.filter(
+              (order) =>
+                order.status ===
+                "DONE"
+            ).length;
+
+          const todaySales =
+            todayOrders.reduce(
+              (sum, order) =>
+                sum +
+                safePrice(
+                  order.total
+                ),
+              0
+            );
+
+          const doneSales =
+            todayOrders
+              .filter(
+                (order) =>
+                  order.status ===
+                  "DONE"
+              )
+              .reduce(
+                (sum, order) =>
+                  sum +
+                  safePrice(
+                    order.total
+                  ),
+                0
+              );
+
+          return json(
+            res,
+            200,
+            {
+              orders:
+                orders.length,
+
+              todayOrders:
+                todayOrders.length,
+
+              todaySales,
+
+              doneSales,
+
+              newOrders,
+
+              cookingOrders,
+
+              doneOrders,
+
+              pendingOrders:
+                newOrders +
+                cookingOrders
+            }
+          );
         }
-      );
+
+        // =================================================
+        // 静态文件
+        // =================================================
+
+        let file;
+
+        if (p === "/") {
+          file =
+            "index.html";
+        } else if (
+          p === "/admin"
+        ) {
+          file =
+            "admin.html";
+        } else {
+          file =
+            decodeURIComponent(
+              p
+            ).replace(
+              /^[/\\]+/,
+              ""
+            );
+        }
+
+        const fullPath =
+          path.resolve(
+            PUBLIC,
+            file
+          );
+
+        const publicRoot =
+          path.resolve(
+            PUBLIC
+          );
+
+        // 防止 ../ 路径穿越
+        if (
+          fullPath !==
+            publicRoot &&
+          !fullPath.startsWith(
+            publicRoot +
+              path.sep
+          )
+        ) {
+          return send(
+            res,
+            403,
+            "text/plain; charset=utf-8",
+            "Forbidden"
+          );
+        }
+
+        fs.readFile(
+          fullPath,
+          (error, data) => {
+            if (error) {
+              return send(
+                res,
+                404,
+                "text/plain; charset=utf-8",
+                "Not found"
+              );
+            }
+
+            const ext =
+              path.extname(
+                fullPath
+              ).toLowerCase();
+
+            const types = {
+              ".html":
+                "text/html; charset=utf-8",
+
+              ".js":
+                "text/javascript; charset=utf-8",
+
+              ".css":
+                "text/css; charset=utf-8",
+
+              ".json":
+                "application/json; charset=utf-8",
+
+              ".svg":
+                "image/svg+xml",
+
+              ".png":
+                "image/png",
+
+              ".jpg":
+                "image/jpeg",
+
+              ".jpeg":
+                "image/jpeg",
+
+              ".webp":
+                "image/webp",
+
+              ".gif":
+                "image/gif",
+
+              ".ico":
+                "image/x-icon"
+            };
+
+            send(
+              res,
+              200,
+              types[ext] ||
+                "application/octet-stream",
+              data
+            );
+          }
+        );
+
+      } catch (error) {
+        console.error(
+          "SERVER ERROR:",
+          error
+        );
+
+        if (!res.headersSent) {
+          return json(
+            res,
+            500,
+            {
+              error:
+                "服务器内部错误",
+
+              detail:
+                process.env.NODE_ENV ===
+                "development"
+                  ? String(
+                      error.message ||
+                        error
+                    )
+                  : undefined
+            }
+          );
+        }
+      }
     }
-  }
-);
+  );
+
+// =====================================================
+// 启动
+// =====================================================
 
 server.listen(
   PORT,
   () => {
     console.log(
-      `四季三餐 v4.0: http://localhost:${PORT}`
+      "四季三餐 v5: http://localhost:" +
+      PORT
     );
 
     console.log(
-      "POS payment API: POST /api/pos/payment"
+      "图片目录:",
+      UPLOADS
     );
   }
 );
-```
