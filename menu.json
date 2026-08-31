@@ -54,5 +54,25 @@
     "price": 5000,
     "emoji": "🍺",
     "on": true
+  },
+  {
+    "id": "menu",
+    "name": "鲜肉馄饨",
+    "kr": "고기 완탕",
+    "price": 9000,
+    "emoji": "🍽️",
+    "image": "/uploads/9b31e4539753d75be4b0bbf8f1e5ecbc.jpg",
+    "on": true,
+    "category": "馄饨"
+  },
+  {
+    "id": "menu-2",
+    "name": "手工水饺",
+    "kr": "수제 만두",
+    "price": 9000,
+    "emoji": "🍽️",
+    "image": "/uploads/593ed33a9acdb170fd28ea931cd03bcd.jpg",
+    "on": true,
+    "category": "水饺"
   }
 ]
