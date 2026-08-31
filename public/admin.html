@@ -42,7 +42,68 @@ async function dashboard(){app.innerHTML=`<div class="toolbar"><button class="bt
 async function load(){let r=await fetch("/api/orders");if(r.status===401)return location.reload();let os=await r.json();os.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));orders.innerHTML=os.map(o=>`<div class="order ${o.status==="NEW"?"new":""}"><div class="head"><span>${o.type==="TAKEOUT"?"🥡":"🪑"} ${o.table}号桌</span><span>₩${won(o.total)}</span></div><small>${new Date(o.createdAt).toLocaleString()}</small><div>${o.items.map(x=>`<div class="item"><span>${x.name}</span><b>×${x.qty}</b></div>`).join("")}</div>${o.note?`<div>📝 ${o.note}</div>`:""}<div class="status"><button onclick="status('${o.id}','NEW')">新订单</button><button onclick="status('${o.id}','COOKING')">制作中</button><button onclick="status('${o.id}','DONE')">完成</button><button onclick="delOrder('${o.id}')">删除</button></div></div>`).join("")||"<p>暂无订单</p>";let s=await fetch("/api/stats").then(r=>r.json());stats.innerHTML=`<div class="stat">今日订单<b>${s.todayOrders}</b></div><div class="stat">今日营业额<b>₩${won(s.todaySales)}</b></div><div class="stat">完成订单营业额<b>₩${won(s.doneSales)}</b></div>`}
 async function status(id,s){await fetch("/api/orders/"+id+"/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:s})});load()}async function delOrder(id){if(confirm("确定删除这笔订单？")){await fetch("/api/orders/"+id,{method:"DELETE"});load()}}
 async function loadMenu(){let ms=await fetch("/api/menu/all").then(r=>r.json());menu.innerHTML=ms.map(x=>`<div class="menuRow"><span class="name">${x.emoji} ${x.name} / ${x.kr}</span><input id="p-${x.id}" value="${x.price}" type="number"><label><input id="o-${x.id}" type="checkbox" ${x.on?"checked":""}> 上架</label><button class="btn" onclick="saveMenu('${x.id}')">保存</button></div>`).join("")}
-async function saveMenu(id){await fetch("/api/menu",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,price:document.getElementById("p-"+id).value,on:document.getElementById("o-"+id).checked})});alert("已保存")}
+async function saveMenu(id){await fetch("/api/menu",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,price:document.getElementById("p-"+id).value,on:document.getElementById("o-"+id).checked})});alert("已保存")}```js
+function showAddMenu(){
+  document.getElementById("addMenuBox").style.display="block";
+  document.getElementById("newName").focus();
+}
+
+function hideAddMenu(){
+  document.getElementById("addMenuBox").style.display="none";
+}
+
+async function addMenu(){
+
+  const name=document.getElementById("newName").value.trim();
+  const kr=document.getElementById("newKr").value.trim();
+  const price=Number(document.getElementById("newPrice").value);
+  const emoji=document.getElementById("newEmoji").value.trim()||"🍽️";
+  const on=document.getElementById("newOn").checked;
+
+  if(!name){
+    alert("请输入菜品名称");
+    return;
+  }
+
+  if(!price || price<0){
+    alert("请输入正确的价格");
+    return;
+  }
+
+  const r=await fetch("/api/menu",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      name,
+      kr,
+      price,
+      emoji,
+      on
+    })
+  });
+
+  const data=await r.json();
+
+  if(!r.ok){
+    alert(data.error||"新增失败");
+    return;
+  }
+
+  alert("✅ 菜品添加成功");
+
+  document.getElementById("newName").value="";
+  document.getElementById("newKr").value="";
+  document.getElementById("newPrice").value="";
+  document.getElementById("newEmoji").value="🍽️";
+  document.getElementById("newOn").checked=true;
+
+  hideAddMenu();
+  loadMenu();
+}
+```
+
 async function logout(){await fetch("/api/logout",{method:"POST"});location.reload()}
 app.innerHTML=`<div class="login"><h2>老板后台</h2><p>请输入管理员密码</p><input id="pw" type="password" placeholder="管理员密码"><button class="btn" style="width:100%" onclick="login()">进入后台</button></div>`;
 </script></body></html>
