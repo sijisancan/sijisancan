@@ -1,40 +1,53 @@
 ```html
 <!doctype html>
-<html lang="ko">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>四季三餐｜后台</title>
+<title>四季三餐｜老板后台 v4</title>
 
 <style>
 *{box-sizing:border-box}
+
 body{
   margin:0;
   background:#f5f3ef;
-  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif;
-  color:#222
+  color:#222;
+  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Noto Sans SC",sans-serif
 }
+
 header{
   background:#18251e;
   color:#fff;
-  padding:20px
+  padding:20px 16px
 }
+
 .brand{
   font-size:23px;
   font-weight:800
 }
+
+.sub{
+  font-size:12px;
+  opacity:.8;
+  margin-top:4px
+}
+
 .wrap{
-  max-width:1100px;
+  max-width:1200px;
   margin:auto;
   padding:15px
 }
+
 .login{
   max-width:420px;
   margin:70px auto;
   background:#fff;
   padding:25px;
-  border-radius:16px
+  border-radius:16px;
+  box-shadow:0 8px 30px #0000000d
 }
+
 .login input{
   width:100%;
   padding:13px;
@@ -42,105 +55,281 @@ header{
   border-radius:9px;
   margin:12px 0
 }
+
 .btn{
   border:0;
   border-radius:9px;
   padding:10px 14px;
   background:#18251e;
   color:#fff;
-  cursor:pointer
+  cursor:pointer;
+  font-weight:700
 }
+
+.btn:hover{
+  opacity:.9
+}
+
+.btn.red{
+  background:#b33a2f
+}
+
+.btn.gray{
+  background:#777
+}
+
+.btn.green{
+  background:#247a45
+}
+
+.btn.orange{
+  background:#c27620
+}
+
 .toolbar{
   display:flex;
   gap:8px;
   flex-wrap:wrap;
   margin-bottom:15px
 }
+
 .stats{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(6,1fr);
   gap:10px;
   margin-bottom:15px
 }
+
 .stat{
   background:#fff;
   padding:15px;
-  border-radius:14px
+  border-radius:14px;
+  box-shadow:0 3px 12px #00000008
 }
+
+.stat small{
+  color:#777
+}
+
 .stat b{
   display:block;
   font-size:21px;
   margin-top:5px
 }
+
+.section{
+  margin-top:18px
+}
+
+.sectionTitle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px
+}
+
+.sectionTitle h3{
+  margin:0
+}
+
 .orders{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(330px,1fr));
   gap:12px
 }
+
 .order{
   background:#fff;
   border-radius:15px;
-  padding:15px
+  padding:15px;
+  box-shadow:0 3px 12px #00000008
 }
-.new{
+
+.order.new{
   border-left:5px solid #b33a2f
 }
+
+.order.cooking{
+  border-left:5px solid #c27620
+}
+
+.order.done{
+  border-left:5px solid #247a45
+}
+
+.order.cancelled{
+  border-left:5px solid #777
+  opacity:.75
+}
+
 .head{
   display:flex;
   justify-content:space-between;
+  align-items:center;
   font-weight:800
 }
+
+.orderId{
+  color:#777;
+  font-size:11px;
+  margin-top:4px;
+  word-break:break-all
+}
+
 .item{
   display:flex;
   justify-content:space-between;
-  padding:5px 0
+  padding:6px 0;
+  border-bottom:1px solid #f0f0f0
 }
-.status{
+
+.item:last-child{
+  border-bottom:0
+}
+
+.note{
+  margin-top:10px;
+  padding:9px;
+  background:#fff8e9;
+  border-radius:9px;
+  font-size:13px
+}
+
+.badges{
   display:flex;
+  flex-wrap:wrap;
   gap:6px;
   margin-top:10px
 }
-.status button{
-  flex:1;
-  padding:9px;
+
+.badge{
+  display:inline-block;
+  padding:5px 8px;
+  border-radius:20px;
+  font-size:11px;
+  font-weight:700
+}
+
+.badge.new{
+  background:#ffe3df;
+  color:#9d2d23
+}
+
+.badge.cooking{
+  background:#fff0d6;
+  color:#9b5c10
+}
+
+.badge.done{
+  background:#dff4e6;
+  color:#1d6c3a
+}
+
+.badge.cancelled{
+  background:#eee;
+  color:#666
+}
+
+.badge.unpaid{
+  background:#fff0d6;
+  color:#9b5c10
+}
+
+.badge.paid{
+  background:#dff4e6;
+  color:#1d6c3a
+}
+
+.badge.refunded{
+  background:#eee0f8;
+  color:#74439a
+}
+
+.actions{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:6px;
+  margin-top:12px
+}
+
+.actions button{
   border:0;
   border-radius:8px;
-  cursor:pointer
+  padding:9px;
+  cursor:pointer;
+  font-weight:700
 }
+
 .qr,.menu{
   background:#fff;
   margin-top:15px;
   padding:15px;
   border-radius:15px
 }
-.qrs img{
-  width:150px
+
+.qrs{
+  display:flex;
+  flex-wrap:wrap
 }
+
 .qrs>div{
   display:inline-block;
   text-align:center;
-  margin:8px
+  margin:8px;
+  padding:8px;
+  border:1px solid #eee;
+  border-radius:12px
 }
+
+.qrs img{
+  width:150px;
+  display:block
+}
+
+.qrButtons{
+  display:flex;
+  gap:5px;
+  margin-top:6px
+}
+
+.qrButtons button{
+  flex:1;
+  border:0;
+  border-radius:7px;
+  padding:6px;
+  cursor:pointer
+}
+
 .menuRow{
   display:flex;
   gap:8px;
   align-items:center;
-  padding:8px 0;
+  padding:10px 0;
   border-bottom:1px solid #eee
 }
-.menuRow input{
-  width:90px;
-  padding:8px
+
+.menuRow input[type=number]{
+  width:100px;
+  padding:8px;
+  border:1px solid #ddd;
+  border-radius:7px
 }
+
 .menuRow .name{
   flex:1
 }
+
+.menuEmoji{
+  width:35px
+}
+
 .addBox{
   background:#f5f3ef;
   padding:15px;
   border-radius:12px;
   margin-bottom:15px
 }
+
 .addBox input{
   width:100%;
   padding:10px;
@@ -148,15 +337,53 @@ header{
   border:1px solid #ddd;
   border-radius:8px
 }
+
+.empty{
+  background:#fff;
+  border-radius:14px;
+  padding:30px;
+  text-align:center;
+  color:#777
+}
+
+.help{
+  background:#eef5f0;
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:15px;
+  font-size:13px;
+  line-height:1.7
+}
+
+@media(max-width:900px){
+  .stats{
+    grid-template-columns:repeat(3,1fr)
+  }
+}
+
 @media(max-width:600px){
   .stats{
+    grid-template-columns:repeat(2,1fr)
+  }
+
+  .orders{
     grid-template-columns:1fr
   }
+
   .qrs img{
     width:110px
   }
+
   .menuRow{
     flex-wrap:wrap
+  }
+
+  .menuRow .name{
+    flex-basis:100%
+  }
+
+  .actions{
+    grid-template-columns:1fr 1fr
   }
 }
 </style>
@@ -166,107 +393,182 @@ header{
 
 <header>
   <div class="brand">四季三餐 · 사계삼찬</div>
-  <div>老板 / 后厨管理后台</div>
+  <div class="sub">老板 / 后厨 / 收银管理后台 · v4.0</div>
 </header>
 
 <div id="app" class="wrap"></div>
 
 <script>
 
-const won=n=>Number(n).toLocaleString("ko-KR");
+const won=n=>Number(n||0).toLocaleString("ko-KR");
 
-let app=document.getElementById("app");
+const app=document.getElementById("app");
+
+let refreshTimer=null;
+let firstLoad=true;
+
+
+/* =========================
+   通用请求
+========================= */
+
+async function api(url,options={}){
+  const r=await fetch(url,options);
+
+  if(r.status===401){
+    location.reload();
+    throw new Error("unauthorized");
+  }
+
+  return r;
+}
+
+
+/* =========================
+   登录
+========================= */
 
 async function login(){
 
-  let p=document.getElementById("pw").value;
+  const pw=document.getElementById("pw").value;
 
-  let r=await fetch("/api/login",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({
-      password:p
-    })
-  });
+  if(!pw){
+    alert("请输入管理员密码");
+    return;
+  }
 
-  if(r.ok){
-    dashboard();
-  }else{
-    alert("密码错误");
+  try{
+
+    const r=await fetch("/api/login",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        password:pw
+      })
+    });
+
+    if(r.ok){
+      dashboard();
+    }else{
+      alert("密码错误");
+    }
+
+  }catch(e){
+    alert("无法连接服务器");
   }
 }
 
 
-async function dashboard(){
+/* =========================
+   后台首页
+========================= */
+
+function dashboard(){
 
   app.innerHTML=`
 
     <div class="toolbar">
-      <button class="btn" onclick="load()">🔄 刷新</button>
-      <button class="btn" onclick="logout()">退出</button>
+
+      <button class="btn" onclick="loadAll()">
+        🔄 刷新
+      </button>
+
+      <button class="btn" onclick="loadOrders()">
+        📋 订单
+      </button>
+
+      <button class="btn" onclick="loadMenu()">
+        🍜 菜单
+      </button>
+
+      <button class="btn" onclick="scrollToQR()">
+        📱 二维码
+      </button>
+
+      <button class="btn gray" onclick="logout()">
+        退出
+      </button>
+
+    </div>
+
+    <div class="help">
+      💡 <b>订单流程：</b>
+      新订单 → 制作中 → 完成 → POS / 手动结账 → 已结束。
+      <br>
+      💳 付款状态与厨房制作状态分开记录。
     </div>
 
     <div id="stats" class="stats"></div>
 
-    <div id="orders" class="orders"></div>
+    <div class="section">
+
+      <div class="sectionTitle">
+
+        <h3>📋 实时订单</h3>
+
+        <span id="lastUpdate"
+          style="font-size:12px;color:#888">
+        </span>
+
+      </div>
+
+      <div id="orders" class="orders"></div>
+
+    </div>
 
     <div class="menu">
 
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 style="margin:0">菜单管理</h3>
+      <div class="sectionTitle">
 
-        <button class="btn" onclick="showAddMenu()">
+        <h3>🍜 菜单管理</h3>
+
+        <button class="btn"
+          onclick="showAddMenu()">
           ＋ 新增菜品
         </button>
+
       </div>
 
-      <div id="addMenuBox" class="addBox" style="display:none">
+      <div id="addMenuBox"
+        class="addBox"
+        style="display:none">
 
         <h4>新增菜品</h4>
 
-        <input
-          id="newName"
-          placeholder="菜品名称"
-        >
+        <input id="newName"
+          placeholder="菜品名称">
 
-        <input
-          id="newKr"
-          placeholder="韩文名称"
-        >
+        <input id="newKr"
+          placeholder="韩文名称">
 
-        <input
-          id="newPrice"
+        <input id="newPrice"
           type="number"
-          placeholder="价格，例如 11000"
-        >
+          placeholder="价格，例如 11000">
 
-        <input
-          id="newEmoji"
+        <input id="newEmoji"
           placeholder="Emoji，例如 🍜"
-          value="🍽️"
-        >
+          value="🍽️">
 
         <label style="display:block;margin:10px 0">
-          <input
-            id="newOn"
+
+          <input id="newOn"
             type="checkbox"
             checked
-            style="width:auto"
-          >
+            style="width:auto">
+
           立即上架
+
         </label>
 
-        <button class="btn" onclick="addMenu()">
+        <button class="btn green"
+          onclick="addMenu()">
           保存菜品
         </button>
 
-        <button
-          class="btn"
-          style="background:#777"
-          onclick="hideAddMenu()"
-        >
+        <button class="btn gray"
+          onclick="hideAddMenu()">
           取消
         </button>
 
@@ -276,9 +578,22 @@ async function dashboard(){
 
     </div>
 
-    <div class="qr">
+    <div class="qr" id="qrSection">
 
-      <h3>30张桌子二维码</h3>
+      <div class="sectionTitle">
+
+        <h3>📱 30张桌子二维码</h3>
+
+        <button class="btn"
+          onclick="window.print()">
+          🖨️ 打印二维码
+        </button>
+
+      </div>
+
+      <p style="font-size:13px;color:#777">
+        顾客扫描对应桌号二维码后，会自动进入该桌点餐页面。
+      </p>
 
       <div class="qrs" id="qrs"></div>
 
@@ -286,279 +601,809 @@ async function dashboard(){
 
   `;
 
-  for(let i=1;i<=30;i++){
+  renderQR();
 
-    qrs.innerHTML+=`
-      <div>
-        <img src="/api/qr?table=${i}">
-        <br>
-        ${i}号桌
+  loadAll();
+
+  if(refreshTimer){
+    clearInterval(refreshTimer);
+  }
+
+  refreshTimer=setInterval(loadOrders,3000);
+}
+
+
+/* =========================
+   一次加载全部
+========================= */
+
+async function loadAll(){
+
+  await Promise.all([
+    loadOrders(),
+    loadMenu()
+  ]);
+
+  firstLoad=false;
+}
+
+
+/* =========================
+   订单
+========================= */
+
+async function loadOrders(){
+
+  try{
+
+    const r=await api("/api/orders");
+
+    const os=await r.json();
+
+    os.sort(
+      (a,b)=>
+        new Date(b.createdAt)-
+        new Date(a.createdAt)
+    );
+
+    renderOrders(os);
+
+    const s=await api("/api/stats")
+      .then(r=>r.json());
+
+    renderStats(s);
+
+    document.getElementById("lastUpdate").textContent=
+      "最后更新："+new Date().toLocaleTimeString("ko-KR");
+
+  }catch(e){
+
+    if(firstLoad){
+      document.getElementById("orders").innerHTML=
+        '<div class="empty">订单加载失败</div>';
+    }
+
+  }
+}
+
+
+/* =========================
+   状态文字
+========================= */
+
+function statusText(s){
+
+  return {
+    NEW:"新订单",
+    COOKING:"制作中",
+    DONE:"已完成",
+    CANCELLED:"已取消"
+  }[s]||s;
+
+}
+
+function paymentText(s){
+
+  return {
+    UNPAID:"未付款",
+    PAID:"已付款",
+    REFUNDED:"已退款"
+  }[s]||"未付款";
+
+}
+
+
+/* =========================
+   订单卡片
+========================= */
+
+function renderOrders(os){
+
+  const box=document.getElementById("orders");
+
+  if(!os.length){
+
+    box.innerHTML=
+      '<div class="empty">📭 暂无订单</div>';
+
+    return;
+  }
+
+  box.innerHTML=os.map(o=>{
+
+    const status=o.status||"NEW";
+    const payment=o.paymentStatus||"UNPAID";
+
+    const orderClass=
+      status==="NEW"?"new":
+      status==="COOKING"?"cooking":
+      status==="DONE"?"done":
+      "cancelled";
+
+    const typeText=
+      o.type==="TAKEOUT"
+      ?"🥡 打包"
+      :"🪑 堂食";
+
+    const paidClass=
+      payment==="PAID"?"paid":
+      payment==="REFUNDED"?"refunded":
+      "unpaid";
+
+    const closed=
+      o.closedAt
+      ?`<span class="badge paid">🔒 已结束</span>`
+      :"";
+
+    const payInfo=
+      payment==="PAID"
+      ?`
+        <div style="font-size:12px;color:#247a45;margin-top:6px">
+          💳 ${o.paymentMethod||"POS"}
+          ${o.paymentTransactionId
+            ?" · "+escapeHtml(o.paymentTransactionId)
+            :""}
+          <br>
+          ${o.paidAt
+            ?"付款："+new Date(o.paidAt).toLocaleString("ko-KR")
+            :""}
+        </div>
+      `
+      :"";
+
+    return `
+
+      <div class="order ${orderClass}">
+
+        <div class="head">
+
+          <span>
+            ${typeText}
+            ${o.table}号桌
+          </span>
+
+          <span>
+            ₩${won(o.total)}
+          </span>
+
+        </div>
+
+        <div class="orderId">
+          订单号：${escapeHtml(o.id)}
+        </div>
+
+        <small style="color:#777">
+          ${new Date(o.createdAt)
+            .toLocaleString("ko-KR")}
+        </small>
+
+        <div class="badges">
+
+          <span class="badge ${
+            status==="NEW"?"new":
+            status==="COOKING"?"cooking":
+            status==="DONE"?"done":
+            "cancelled"
+          }">
+            ${statusText(status)}
+          </span>
+
+          <span class="badge ${paidClass}">
+            ${paymentText(payment)}
+          </span>
+
+          ${closed}
+
+        </div>
+
+        <div style="margin-top:10px">
+
+          ${(o.items||[]).map(x=>`
+
+            <div class="item">
+
+              <span>
+                ${x.emoji||"🍽️"}
+                ${escapeHtml(x.name)}
+              </span>
+
+              <b>
+                ×${x.qty}
+                <span style="font-weight:400;color:#777">
+                  ₩${won(x.price*x.qty)}
+                </span>
+              </b>
+
+            </div>
+
+          `).join("")}
+
+        </div>
+
+        ${o.note
+          ?`
+            <div class="note">
+              📝 ${escapeHtml(o.note)}
+            </div>
+          `
+          :""
+        }
+
+        ${payInfo}
+
+        <div class="actions">
+
+          <button
+            style="background:#ffe3df"
+            onclick="changeStatus('${o.id}','NEW')">
+            🆕 新订单
+          </button>
+
+          <button
+            style="background:#fff0d6"
+            onclick="changeStatus('${o.id}','COOKING')">
+            👨‍🍳 制作中
+          </button>
+
+          <button
+            style="background:#dff4e6"
+            onclick="changeStatus('${o.id}','DONE')">
+            ✅ 完成
+          </button>
+
+          ${
+            payment!=="PAID"
+            ?`
+              <button
+                style="background:#dff4e6"
+                onclick="manualPay('${o.id}')">
+                💰 手动结账
+              </button>
+            `
+            :`
+              <button
+                style="background:#eee0f8"
+                onclick="refundOrder('${o.id}')">
+                ↩️ 退款
+              </button>
+            `
+          }
+
+          ${
+            payment!=="PAID" &&
+            status!=="CANCELLED"
+            ?`
+              <button
+                style="background:#fff4e5"
+                onclick="cancelOrder('${o.id}')">
+                🚫 取消订单
+              </button>
+            `
+            :""
+          }
+
+          <button
+            style="background:#eee;color:#555"
+            onclick="delOrder('${o.id}')">
+            🗑️ 删除
+          </button>
+
+        </div>
+
       </div>
+
     `;
 
-  }
+  }).join("");
 
-  load();
-  loadMenu();
-
-  setInterval(load,3000);
 }
 
 
-async function load(){
+/* =========================
+   HTML安全
+========================= */
 
-  let r=await fetch("/api/orders");
+function escapeHtml(value){
 
-  if(r.status===401){
-    return location.reload();
-  }
+  return String(value??"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 
-  let os=await r.json();
-
-  os.sort(
-    (a,b)=>b.createdAt.localeCompare(a.createdAt)
-  );
-
-  orders.innerHTML=os.map(o=>`
-
-    <div class="order ${o.status==="NEW"?"new":""}">
-
-      <div class="head">
-
-        <span>
-          ${o.type==="TAKEOUT"?"🥡":"🪑"}
-          ${o.table}号桌
-        </span>
-
-        <span>
-          ₩${won(o.total)}
-        </span>
-
-      </div>
-
-      <small>
-        ${new Date(o.createdAt).toLocaleString()}
-      </small>
-
-      <div>
-
-        ${o.items.map(x=>`
-
-          <div class="item">
-
-            <span>${x.name}</span>
-
-            <b>×${x.qty}</b>
-
-          </div>
-
-        `).join("")}
-
-      </div>
-
-      ${o.note?`
-        <div>📝 ${o.note}</div>
-      `:""}
-
-      <div class="status">
-
-        <button onclick="status('${o.id}','NEW')">
-          新订单
-        </button>
-
-        <button onclick="status('${o.id}','COOKING')">
-          制作中
-        </button>
-
-        <button onclick="status('${o.id}','DONE')">
-          完成
-        </button>
-
-        <button onclick="delOrder('${o.id}')">
-          删除
-        </button>
-
-      </div>
-
-    </div>
-
-  `).join("") || "<p>暂无订单</p>";
-
-
-  let s=await fetch("/api/stats").then(
-    r=>r.json()
-  );
-
-  stats.innerHTML=`
-
-    <div class="stat">
-      今日订单
-      <b>${s.todayOrders}</b>
-    </div>
-
-    <div class="stat">
-      今日营业额
-      <b>₩${won(s.todaySales)}</b>
-    </div>
-
-    <div class="stat">
-      完成订单营业额
-      <b>₩${won(s.doneSales)}</b>
-    </div>
-
-  `;
 }
 
 
-async function status(id,s){
+/* =========================
+   修改制作状态
+========================= */
 
-  await fetch(
-    "/api/orders/"+id+"/status",
-    {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        status:s
-      })
+async function changeStatus(id,status){
+
+  try{
+
+    const r=await api(
+      "/api/orders/"+encodeURIComponent(id)+"/status",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          status
+        })
+      }
+    );
+
+    if(!r.ok){
+
+      const d=await r.json().catch(()=>({}));
+
+      alert(d.error||"修改失败");
+
+      return;
     }
-  );
 
-  load();
+    loadOrders();
+
+  }catch(e){
+
+    alert("操作失败");
+
+  }
+
 }
 
+
+/* =========================
+   手动结账
+========================= */
+
+async function manualPay(id){
+
+  const method=
+    prompt(
+      "请输入付款方式：\nCARD = 刷卡\nCASH = 现金\nPOS = POS\nOTHER = 其他",
+      "POS"
+    );
+
+  if(method===null)return;
+
+  const paymentMethod=
+    method.trim()||"MANUAL";
+
+  const transactionId=
+    prompt(
+      "如果有POS交易号，可以输入；没有直接取消即可。",
+      ""
+    );
+
+  try{
+
+    const r=await api(
+      "/api/orders/"+encodeURIComponent(id)+"/pay",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          paymentMethod,
+          transactionId:
+            transactionId?
+            transactionId.trim():
+            ""
+        })
+      }
+    );
+
+    const d=await r.json();
+
+    if(!r.ok){
+
+      alert(d.error||"结账失败");
+
+      return;
+    }
+
+    alert(
+      "✅ 结账成功\n\n"+
+      "订单："+id+
+      "\n金额：₩"+won(d.order.total)+
+      "\n付款方式："+d.order.paymentMethod+
+      "\n订单已结束"
+    );
+
+    loadOrders();
+
+  }catch(e){
+
+    alert("结账失败");
+
+  }
+
+}
+
+
+/* =========================
+   取消订单
+========================= */
+
+async function cancelOrder(id){
+
+  if(!confirm(
+    "确定取消这个订单吗？"
+  ))return;
+
+  await changeStatus(
+    id,
+    "CANCELLED"
+  );
+
+}
+
+
+/* =========================
+   退款
+========================= */
+
+async function refundOrder(id){
+
+  if(!confirm(
+    "确定要给这个订单做退款记录吗？"
+  ))return;
+
+  const transactionId=
+    prompt(
+      "请输入退款交易号（可选）：",
+      ""
+    );
+
+  try{
+
+    const r=await fetch(
+      "/api/pos/orders/"+
+      encodeURIComponent(id)+
+      "/refund",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          transactionId:
+            transactionId?
+            transactionId.trim():
+            ""
+        })
+      }
+    );
+
+    const d=await r.json();
+
+    if(!r.ok){
+
+      alert(
+        d.error||"退款失败"
+      );
+
+      return;
+    }
+
+    alert("✅ 退款记录成功");
+
+    loadOrders();
+
+  }catch(e){
+
+    alert("退款失败");
+
+  }
+
+}
+
+
+/* =========================
+   删除订单
+========================= */
 
 async function delOrder(id){
 
-  if(confirm("确定删除这笔订单？")){
+  if(!confirm(
+    "确定删除这笔订单？\n删除后后台不会再显示。"
+  ))return;
 
-    await fetch(
-      "/api/orders/"+id,
+  try{
+
+    const r=await api(
+      "/api/orders/"+encodeURIComponent(id),
       {
         method:"DELETE"
       }
     );
 
-    load();
+    if(!r.ok){
+
+      const d=await r.json().catch(()=>({}));
+
+      alert(d.error||"删除失败");
+
+      return;
+    }
+
+    loadOrders();
+
+  }catch(e){
+
+    alert("删除失败");
+
   }
+
 }
 
+
+/* =========================
+   统计
+========================= */
+
+function renderStats(s){
+
+  document.getElementById("stats").innerHTML=`
+
+    <div class="stat">
+      <small>今日订单</small>
+      <b>${s.todayOrders||0}</b>
+    </div>
+
+    <div class="stat">
+      <small>今日营业额</small>
+      <b>₩${won(s.todaySales)}</b>
+    </div>
+
+    <div class="stat">
+      <small>今日已付款</small>
+      <b>${s.todayPaidOrders||0}</b>
+    </div>
+
+    <div class="stat">
+      <small>今日已收款</small>
+      <b>₩${won(s.todayPaidSales)}</b>
+    </div>
+
+    <div class="stat">
+      <small>累计已付款</small>
+      <b>₩${won(s.paidSales)}</b>
+    </div>
+
+    <div class="stat">
+      <small>已完成订单</small>
+      <b>${s.completedOrders||0}</b>
+    </div>
+
+  `;
+
+}
+
+
+/* =========================
+   菜单
+========================= */
 
 async function loadMenu(){
 
-  let r=await fetch("/api/menu/all");
+  try{
 
-  if(r.status===401){
-    return location.reload();
+    const r=await api(
+      "/api/menu/all"
+    );
+
+    const ms=await r.json();
+
+    document.getElementById("menu").innerHTML=
+      ms.map(x=>`
+
+        <div class="menuRow">
+
+          <span class="menuEmoji">
+            ${x.emoji||"🍽️"}
+          </span>
+
+          <span class="name">
+
+            <b>${escapeHtml(x.name)}</b>
+
+            ${
+              x.kr
+              ?`<small style="color:#777">
+                  / ${escapeHtml(x.kr)}
+                </small>`
+              :""
+            }
+
+          </span>
+
+          <input
+            id="p-${safeId(x.id)}"
+            value="${Number(x.price)||0}"
+            type="number"
+            min="0"
+          >
+
+          <label>
+
+            <input
+              id="o-${safeId(x.id)}"
+              type="checkbox"
+              ${x.on!==false?"checked":""}
+              style="width:auto"
+            >
+
+            上架
+
+          </label>
+
+          <button
+            class="btn"
+            onclick="saveMenu('${escapeAttr(x.id)}')">
+            保存
+          </button>
+
+        </div>
+
+      `).join("")
+      ||'<div class="empty">暂无菜品</div>';
+
+  }catch(e){
+
+    document.getElementById("menu").innerHTML=
+      '<div class="empty">菜单加载失败</div>';
+
   }
-
-  let ms=await r.json();
-
-  menu.innerHTML=ms.map(x=>`
-
-    <div class="menuRow">
-
-      <span class="name">
-        ${x.emoji||"🍽️"}
-        ${x.name}
-        ${x.kr?"/ "+x.kr:""}
-      </span>
-
-      <input
-        id="p-${x.id}"
-        value="${x.price}"
-        type="number"
-      >
-
-      <label>
-
-        <input
-          id="o-${x.id}"
-          type="checkbox"
-          ${x.on?"checked":""}
-        >
-
-        上架
-
-      </label>
-
-      <button
-        class="btn"
-        onclick="saveMenu('${x.id}')"
-      >
-        保存
-      </button>
-
-    </div>
-
-  `).join("");
 
 }
 
+
+/* =========================
+   ID安全
+========================= */
+
+function safeId(id){
+
+  return String(id)
+    .replace(/[^a-zA-Z0-9_-]/g,"_");
+
+}
+
+function escapeAttr(value){
+
+  return String(value??"")
+    .replace(/\\/g,"\\\\")
+    .replace(/'/g,"\\'");
+
+}
+
+
+/* =========================
+   保存菜单
+========================= */
 
 async function saveMenu(id){
 
-  await fetch(
-    "/api/menu",
-    {
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
+  const sid=safeId(id);
 
-        id,
+  const price=
+    Number(
+      document.getElementById("p-"+sid).value
+    );
 
-        price:
-          document.getElementById("p-"+id).value,
+  const on=
+    document.getElementById("o-"+sid).checked;
 
-        on:
-          document.getElementById("o-"+id).checked
+  if(price<0 || !Number.isFinite(price)){
 
-      })
+    alert("请输入正确价格");
+
+    return;
+  }
+
+  try{
+
+    const r=await api(
+      "/api/menu",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          id,
+          price,
+          on
+        })
+      }
+    );
+
+    const d=await r.json();
+
+    if(!r.ok){
+
+      alert(d.error||"保存失败");
+
+      return;
     }
-  );
 
-  alert("已保存");
+    alert("✅ 菜品已保存");
 
-  loadMenu();
+    loadMenu();
+
+  }catch(e){
+
+    alert("保存失败");
+
+  }
+
 }
 
+
+/* =========================
+   新增菜单
+========================= */
 
 function showAddMenu(){
 
-  document.getElementById("addMenuBox").style.display="block";
+  document.getElementById(
+    "addMenuBox"
+  ).style.display="block";
 
-  document.getElementById("newName").focus();
+  document.getElementById(
+    "newName"
+  ).focus();
 
 }
-
 
 function hideAddMenu(){
 
-  document.getElementById("addMenuBox").style.display="none";
+  document.getElementById(
+    "addMenuBox"
+  ).style.display="none";
 
 }
 
+
+/* =========================
+   新增菜品
+========================= */
 
 async function addMenu(){
 
   const name=
-    document.getElementById("newName").value.trim();
+    document.getElementById(
+      "newName"
+    ).value.trim();
 
   const kr=
-    document.getElementById("newKr").value.trim();
+    document.getElementById(
+      "newKr"
+    ).value.trim();
 
   const price=
-    Number(document.getElementById("newPrice").value);
+    Number(
+      document.getElementById(
+        "newPrice"
+      ).value
+    );
 
   const emoji=
-    document.getElementById("newEmoji").value.trim()||"🍽️";
+    document.getElementById(
+      "newEmoji"
+    ).value.trim()||
+    "🍽️";
 
   const on=
-    document.getElementById("newOn").checked;
-
+    document.getElementById(
+      "newOn"
+    ).checked;
 
   if(!name){
 
@@ -567,78 +1412,231 @@ async function addMenu(){
     return;
   }
 
+  if(!Number.isFinite(price)||price<0){
 
-  if(!price || price<0){
-
-    alert("请输入正确的价格");
+    alert("请输入正确价格");
 
     return;
   }
 
+  try{
 
-  const r=await fetch(
-    "/api/menu",
-    {
-      method:"POST",
-
-      headers:{
-        "Content-Type":"application/json"
-      },
-
-      body:JSON.stringify({
-
-        name,
-        kr,
-        price,
-        emoji,
-        on
-
-      })
-    }
-  );
-
-
-  const data=await r.json();
-
-
-  if(!r.ok){
-
-    alert(
-      data.error||"新增失败"
+    const r=await api(
+      "/api/menu",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          name,
+          kr,
+          price,
+          emoji,
+          on
+        })
+      }
     );
 
-    return;
+    const data=await r.json();
+
+    if(!r.ok){
+
+      alert(
+        data.error||
+        "新增失败"
+      );
+
+      return;
+    }
+
+    alert(
+      "✅ 菜品添加成功"
+    );
+
+    document.getElementById(
+      "newName"
+    ).value="";
+
+    document.getElementById(
+      "newKr"
+    ).value="";
+
+    document.getElementById(
+      "newPrice"
+    ).value="";
+
+    document.getElementById(
+      "newEmoji"
+    ).value="🍽️";
+
+    document.getElementById(
+      "newOn"
+    ).checked=true;
+
+    hideAddMenu();
+
+    loadMenu();
+
+  }catch(e){
+
+    alert("新增失败");
+
   }
 
-
-  alert("✅ 菜品添加成功");
-
-
-  document.getElementById("newName").value="";
-  document.getElementById("newKr").value="";
-  document.getElementById("newPrice").value="";
-  document.getElementById("newEmoji").value="🍽️";
-  document.getElementById("newOn").checked=true;
-
-
-  hideAddMenu();
-
-  loadMenu();
 }
 
+
+/* =========================
+   二维码
+========================= */
+
+function renderQR(){
+
+  const box=
+    document.getElementById("qrs");
+
+  box.innerHTML="";
+
+  for(let i=1;i<=30;i++){
+
+    box.innerHTML+=`
+
+      <div>
+
+        <img
+          id="qr-${i}"
+          src="/api/qr?table=${i}"
+          alt="${i}号桌二维码"
+        >
+
+        <b>${i}号桌</b>
+
+        <div class="qrButtons">
+
+          <button
+            style="background:#18251e;color:#fff"
+            onclick="openTable(${i})">
+            打开
+          </button>
+
+          <button
+            style="background:#eee"
+            onclick="downloadQR(${i})">
+            下载
+          </button>
+
+        </div>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================
+   打开桌台
+========================= */
+
+function openTable(table){
+
+  window.open(
+    "/?table="+table,
+    "_blank"
+  );
+
+}
+
+
+/* =========================
+   下载二维码
+========================= */
+
+async function downloadQR(table){
+
+  try{
+
+    const r=
+      await fetch(
+        "/api/qr?table="+table
+      );
+
+    const blob=
+      await r.blob();
+
+    const a=
+      document.createElement("a");
+
+    const url=
+      URL.createObjectURL(blob);
+
+    a.href=url;
+
+    a.download=
+      "四季三餐_"+table+"号桌.svg";
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+  }catch(e){
+
+    alert("二维码下载失败");
+
+  }
+
+}
+
+
+/* =========================
+   滚动到二维码
+========================= */
+
+function scrollToQR(){
+
+  document.getElementById(
+    "qrSection"
+  ).scrollIntoView({
+    behavior:"smooth"
+  });
+
+}
+
+
+/* =========================
+   退出
+========================= */
 
 async function logout(){
 
-  await fetch(
-    "/api/logout",
-    {
-      method:"POST"
-    }
-  );
+  try{
 
-  location.reload();
+    await fetch(
+      "/api/logout",
+      {
+        method:"POST"
+      }
+    );
+
+  }finally{
+
+    location.reload();
+
+  }
+
 }
 
+
+/* =========================
+   登录界面
+========================= */
 
 app.innerHTML=`
 
@@ -646,20 +1644,28 @@ app.innerHTML=`
 
     <h2>老板后台</h2>
 
-    <p>请输入管理员密码</p>
+    <p style="color:#777">
+      四季三餐 · 사계삼찬
+    </p>
+
+    <p>
+      请输入管理员密码
+    </p>
 
     <input
       id="pw"
       type="password"
       placeholder="管理员密码"
+      onkeydown="
+        if(event.key==='Enter')login()
+      "
     >
 
     <button
       class="btn"
       style="width:100%"
-      onclick="login()"
-    >
-      进入后台
+      onclick="login()">
+      🔐 进入后台
     </button>
 
   </div>
