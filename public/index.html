@@ -1,31 +1,27 @@
-```html
 <!doctype html>
+
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>四季三餐｜사계삼찬</title>
 
 <style>
 *{
   box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
 }
 
-html{
-  -webkit-text-size-adjust:100%;
+html,body{
+  margin:0;
+  padding:0;
+  background:#f5f3ef;
+  color:#222;
+  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans SC","Noto Sans KR",Arial,sans-serif;
 }
 
 body{
-  margin:0;
-  background:#f7f3ed;
-  color:#242424;
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Noto Sans KR",
-    "Noto Sans SC",
-    sans-serif;
+  padding-bottom:110px;
 }
 
 button,
@@ -38,179 +34,270 @@ button{
   cursor:pointer;
 }
 
-header{
+.header{
   background:#18251e;
   color:#fff;
-  padding:
-    calc(20px + env(safe-area-inset-top))
-    16px
-    20px;
+  padding:18px 16px 16px;
+  position:sticky;
+  top:0;
+  z-index:20;
+  box-shadow:0 2px 12px #0002;
+}
+
+.headerTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
 }
 
 .brand{
-  font-size:25px;
+  font-size:22px;
   font-weight:800;
-  letter-spacing:.2px;
+  letter-spacing:.3px;
 }
 
-.sub{
+.subBrand{
+  margin-top:3px;
   font-size:12px;
   opacity:.8;
-  margin-top:5px;
 }
 
-.table{
-  display:inline-block;
-  background:#b33a2f;
-  padding:7px 13px;
-  border-radius:20px;
-  margin-top:13px;
-  font-size:13px;
+.tableBadge{
+  background:#c99a52;
+  color:#fff;
+  padding:7px 11px;
+  border-radius:999px;
   font-weight:700;
+  font-size:13px;
+  white-space:nowrap;
 }
 
-main{
-  max-width:720px;
+.wrap{
+  max-width:900px;
   margin:auto;
-  padding:15px 14px 120px;
+  padding:12px;
 }
 
 .notice{
   background:#fff;
-  padding:14px;
-  border-radius:13px;
-  font-size:13px;
-  line-height:1.6;
-  box-shadow:0 2px 8px #00000008;
-}
-
-.cat{
-  font-size:19px;
-  font-weight:800;
-  margin:22px 3px 9px;
-}
-
-.loading,
-.empty,
-.error{
-  background:#fff;
   border-radius:14px;
-  padding:18px;
-  text-align:center;
-  color:#777;
+  padding:13px 14px;
+  margin-bottom:12px;
+  box-shadow:0 1px 5px #0000000d;
 }
 
-.error{
-  color:#b33a2f;
+.notice strong{
+  color:#18251e;
 }
 
-.card{
+.typeBox{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.typeBtn{
+  border:1px solid #ddd;
   background:#fff;
-  border-radius:15px;
-  padding:13px;
-  margin:8px 0;
+  color:#333;
+  border-radius:11px;
+  padding:12px;
+  font-weight:700;
+}
+
+.typeBtn.active{
+  background:#18251e;
+  border-color:#18251e;
+  color:#fff;
+}
+
+.categories{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:3px 0 12px;
+  scrollbar-width:none;
+  position:sticky;
+  top:70px;
+  background:#f5f3ef;
+  z-index:10;
+}
+
+.categories::-webkit-scrollbar{
+  display:none;
+}
+
+.catBtn{
+  flex:0 0 auto;
+  border:1px solid #ddd;
+  background:#fff;
+  border-radius:999px;
+  padding:8px 14px;
+  color:#555;
+}
+
+.catBtn.active{
+  background:#18251e;
+  color:#fff;
+  border-color:#18251e;
+}
+
+.menu{
+  display:grid;
+  gap:10px;
+}
+
+.menuItem{
+  background:#fff;
+  border-radius:16px;
+  padding:11px;
   display:flex;
   gap:12px;
-  align-items:center;
-  box-shadow:0 2px 8px #00000008;
+  min-height:125px;
+  box-shadow:0 1px 5px #0000000c;
 }
 
-.pic{
-  width:68px;
-  height:68px;
-  flex:none;
-  border-radius:12px;
-  background:#eee8de;
-  display:grid;
-  place-items:center;
-  font-size:31px;
+.photo{
+  width:120px;
+  height:120px;
+  flex:0 0 120px;
+  border-radius:13px;
+  overflow:hidden;
+  background:#eee;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:38px;
+}
+
+.photo img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
 }
 
 .info{
-  flex:1;
   min-width:0;
+  flex:1;
+  display:flex;
+  flex-direction:column;
 }
 
 .name{
+  font-size:17px;
   font-weight:800;
-  line-height:1.4;
-  word-break:break-word;
+  line-height:1.35;
 }
 
 .kr{
   font-size:12px;
-  color:#777;
+  color:#888;
   margin-top:2px;
 }
 
+.category{
+  display:inline-block;
+  margin-top:7px;
+  color:#8b6a36;
+  font-size:11px;
+}
+
 .price{
+  margin-top:auto;
+  color:#18251e;
   font-weight:800;
-  margin-top:6px;
+  font-size:17px;
 }
 
-.add{
-  flex:none;
-  border:0;
-  background:#b33a2f;
-  color:#fff;
-  border-radius:50%;
-  width:36px;
-  height:36px;
-  font-size:22px;
-  line-height:36px;
-  padding:0;
-}
-
-.add:active{
-  transform:scale(.92);
-}
-
-.bottom{
-  position:fixed;
-  z-index:4;
-  bottom:0;
-  left:0;
-  right:0;
-  padding:
-    10px
-    14px
-    calc(10px + env(safe-area-inset-bottom));
-  background:#fff;
-  border-top:1px solid #ddd;
-}
-
-.btn{
+.addBtn{
+  margin-top:8px;
   width:100%;
-  max-width:720px;
-  display:block;
-  margin:auto;
   border:0;
-  border-radius:12px;
-  height:51px;
   background:#18251e;
   color:#fff;
-  font-weight:800;
-  font-size:16px;
+  border-radius:9px;
+  padding:9px 10px;
+  font-weight:700;
 }
 
-.btn:disabled{
-  opacity:.55;
-  cursor:not-allowed;
+.qtyBox{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:9px;
+  margin-top:8px;
 }
 
-.cart-count{
-  display:inline-block;
-  min-width:22px;
+.qtyBtn{
+  width:31px;
+  height:31px;
+  border:0;
+  border-radius:50%;
+  background:#18251e;
+  color:#fff;
+  font-size:18px;
+  line-height:1;
+}
+
+.qtyNum{
+  min-width:20px;
   text-align:center;
+  font-weight:800;
+}
+
+.empty{
+  text-align:center;
+  background:#fff;
+  border-radius:15px;
+  padding:35px 15px;
+  color:#888;
+}
+
+.cartBar{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:30;
+  background:#fff;
+  border-top:1px solid #ddd;
+  padding:10px max(12px,calc((100vw - 900px)/2 + 12px));
+  box-shadow:0 -3px 18px #0002;
+}
+
+.cartButton{
+  width:100%;
+  max-width:900px;
+  margin:auto;
+  border:0;
+  border-radius:13px;
+  background:#18251e;
+  color:#fff;
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-weight:800;
+}
+
+.cartCount{
+  background:#c99a52;
+  border-radius:999px;
+  padding:4px 9px;
+  margin-right:6px;
 }
 
 .overlay{
-  display:none;
   position:fixed;
   inset:0;
-  background:#0007;
+  background:#0008;
+  z-index:50;
+  display:none;
   align-items:flex-end;
-  z-index:10;
+  justify-content:center;
 }
 
 .overlay.show{
@@ -218,132 +305,99 @@ main{
 }
 
 .sheet{
-  background:#fff;
-  width:100%;
-  max-width:720px;
+  width:min(900px,100%);
   max-height:90vh;
   overflow:auto;
+  background:#fff;
   border-radius:20px 20px 0 0;
-  padding:
-    20px
-    20px
-    calc(20px + env(safe-area-inset-bottom));
-  margin:auto auto 0;
+  padding:18px;
+  animation:up .2s ease;
 }
 
-.sheet-head{
+@keyframes up{
+  from{transform:translateY(100%)}
+  to{transform:translateY(0)}
+}
+
+.sheetTitle{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:10px;
+  margin-bottom:12px;
 }
 
-.sheet-head h2{
+.sheetTitle h2{
   margin:0;
 }
 
 .close{
   border:0;
-  border-radius:50%;
-  width:32px;
-  height:32px;
   background:#eee;
-  font-size:22px;
-  line-height:32px;
-  padding:0;
+  width:35px;
+  height:35px;
+  border-radius:50%;
 }
 
-.type{
-  display:flex;
+.cartList{
+  display:grid;
   gap:8px;
-  margin:15px 0;
 }
 
-.type button{
-  flex:1;
+.cartRow{
+  background:#f7f6f3;
+  border-radius:11px;
   padding:11px;
-  border:1px solid #ddd;
-  background:#fff;
-  border-radius:9px;
-}
-
-.type button.on{
-  background:#18251e;
-  color:#fff;
-  border-color:#18251e;
-}
-
-.cart-list{
-  margin-top:5px;
-}
-
-.row{
   display:flex;
-  justify-content:space-between;
   align-items:center;
-  gap:12px;
-  padding:12px 0;
-  border-bottom:1px solid #eee;
+  gap:10px;
 }
 
-.row-info{
+.cartRowInfo{
   flex:1;
   min-width:0;
 }
 
-.row-name{
-  font-weight:800;
+.cartRowName{
+  font-weight:700;
 }
 
-.row-detail{
-  color:#777;
+.cartRowPrice{
   font-size:12px;
+  color:#777;
   margin-top:3px;
 }
 
-.qty{
+.cartRowQty{
   display:flex;
   align-items:center;
-  gap:5px;
-  flex:none;
+  gap:7px;
 }
 
-.qty button{
-  width:31px;
-  height:31px;
-  border:1px solid #ddd;
-  background:#fff;
-  border-radius:8px;
+.smallQty{
+  width:29px;
+  height:29px;
+  border:0;
+  border-radius:50%;
+  background:#18251e;
+  color:#fff;
 }
 
-.qty span{
-  display:inline-block;
-  width:25px;
-  text-align:center;
-  font-weight:700;
+.section{
+  margin-top:16px;
 }
 
-.total{
-  text-align:right;
-  font-size:20px;
+.sectionTitle{
   font-weight:800;
-  margin:18px 0;
-}
-
-.note-label{
-  display:block;
-  font-size:13px;
-  font-weight:700;
-  margin-bottom:7px;
+  margin-bottom:8px;
 }
 
 .note{
   width:100%;
-  min-height:82px;
-  resize:none;
-  padding:12px;
+  min-height:80px;
+  resize:vertical;
   border:1px solid #ddd;
-  border-radius:10px;
+  border-radius:11px;
+  padding:11px;
   outline:none;
 }
 
@@ -351,973 +405,619 @@ main{
   border-color:#18251e;
 }
 
+.totalBox{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:15px;
+  padding:14px;
+  background:#f7f6f3;
+  border-radius:12px;
+}
+
+.totalLabel{
+  font-weight:700;
+}
+
+.total{
+  color:#b33a2f;
+  font-size:21px;
+  font-weight:900;
+}
+
 .submit{
   width:100%;
-  height:50px;
   border:0;
-  border-radius:12px;
-  background:#b33a2f;
+  background:#18251e;
   color:#fff;
-  font-weight:800;
+  border-radius:12px;
+  padding:14px;
   margin-top:12px;
+  font-weight:800;
+  font-size:16px;
 }
 
 .submit:disabled{
-  opacity:.6;
+  opacity:.5;
 }
 
 .success{
   text-align:center;
-  padding:20px 5px 10px;
+  padding:35px 15px 20px;
 }
 
-.success-icon{
+.successIcon{
   font-size:55px;
-  margin-bottom:8px;
 }
 
 .success h2{
-  margin:5px 0 8px;
+  margin:10px 0 5px;
 }
 
 .success p{
-  color:#666;
-  line-height:1.7;
-  margin:5px 0;
+  color:#777;
 }
 
-.success-order{
-  background:#f7f3ed;
+.orderNumber{
+  background:#f7f6f3;
+  border-radius:11px;
   padding:12px;
-  border-radius:10px;
-  margin:15px 0;
+  margin-top:15px;
   font-weight:700;
 }
 
-.empty-cart{
-  color:#777;
+.loading{
   text-align:center;
-  padding:25px 0;
+  padding:35px;
+  color:#888;
+}
+
+.error{
+  background:#fff1f0;
+  color:#a52820;
+  border-radius:12px;
+  padding:15px;
+  text-align:center;
 }
 
 @media(max-width:600px){
-
-  .card{
-    padding:12px;
+  .wrap{
+    padding:10px;
   }
 
-  .pic{
-    width:62px;
-    height:62px;
-    font-size:28px;
+  .photo{
+    width:105px;
+    height:105px;
+    flex-basis:105px;
   }
 
-  .sheet{
-    max-height:92vh;
+  .menuItem{
+    min-height:105px;
   }
 
+  .name{
+    font-size:16px;
+  }
+
+  .price{
+    font-size:16px;
+  }
 }
 </style>
+
 </head>
 
 <body>
 
-<header>
-
-  <div class="brand">
-    四季三餐 · 사계삼찬
+<header class="header">
+  <div class="headerTop">
+    <div>
+      <div class="brand">四季三餐</div>
+      <div class="subBrand">사계삼찬 · 中韩风味餐厅</div>
+    </div>
+    <div class="tableBadge" id="tableBadge">1号桌</div>
   </div>
-
-  <div class="sub">
-    정성으로 만든 중국식 수제요리
-  </div>
-
-  <div class="table" id="tableBadge">
-    테이블 확인 중...
-  </div>
-
 </header>
 
-
-<main>
+<main class="wrap">
 
   <div class="notice">
-    📱 메뉴를 선택해 주세요。<br>
-    메뉴를 선택한 후 주문을 확인하고 주문하기를 눌러주세요.
+    <strong>欢迎光临四季三餐</strong>
+    <div style="font-size:13px;color:#777;margin-top:4px">
+      请先选择用餐方式，然后选择您喜欢的菜品。
+    </div>
   </div>
 
-  <div id="menu">
-    <div class="loading">
-      메뉴를 불러오는 중입니다...
-    </div>
+  <div class="typeBox">
+    <button id="dineBtn" class="typeBtn active" onclick="setType('DINE_IN')">
+      🪑 堂食
+    </button>
+    <button id="takeBtn" class="typeBtn" onclick="setType('TAKEOUT')">
+      🥡 打包
+    </button>
+  </div>
+
+  <div id="categories" class="categories"></div>
+
+  <div id="menu" class="menu">
+    <div class="loading">正在加载菜单……</div>
   </div>
 
 </main>
 
-
-<div class="bottom">
-
-  <button
-    class="btn"
-    id="cartButton"
-    onclick="openCart()"
-  >
-    🛒 주문 확인 ·
-    <span
-      id="count"
-      class="cart-count"
-    >0</span>
-    개
+<div class="cartBar">
+  <button class="cartButton" onclick="openCart()">
+    <span>
+      <span class="cartCount" id="cartCount">0</span>
+      查看购物车
+    </span>
+    <span id="cartTotal">₩0</span>
   </button>
-
 </div>
 
-
-<div
-  class="overlay"
-  id="overlay"
-  onclick="handleOverlayClick(event)"
->
-
+<div id="cartOverlay" class="overlay" onclick="overlayClick(event)">
   <div class="sheet">
 
-    <div class="sheet-head">
-
-      <h2>주문 확인</h2>
-
-      <button
-        class="close"
-        onclick="closeCart()"
-        aria-label="닫기"
-      >
-        ×
-      </button>
-
-    </div>
-
-
-    <div class="type">
-
-      <button
-        id="dine"
-        class="on"
-        onclick="setType('DINE_IN')"
-      >
-        🍚 매장식사
-      </button>
-
-      <button
-        id="take"
-        onclick="setType('TAKEOUT')"
-      >
-        🥡 포장
-      </button>
-
-    </div>
-
-
-    <div
-      id="cart"
-      class="cart-list"
-    ></div>
-
-
-    <div class="total">
-      합계 ₩<span id="total">0</span>
-    </div>
-
-
-    <label class="note-label">
-      요청사항 / 요청사항
-    </label>
-
-    <textarea
-      id="note"
-      class="note"
-      maxlength="200"
-      placeholder="예: 고수 빼주세요 / 덜 맵게 해주세요"
-    ></textarea>
-
-
-    <button
-      id="submitButton"
-      class="submit"
-      onclick="submitOrder()"
-    >
-      주문하기
-    </button>
-
-  </div>
-
+```
+<div class="sheetTitle">
+  <h2>确认订单</h2>
+  <button class="close" onclick="closeCart()">×</button>
 </div>
 
+<div id="cartList" class="cartList"></div>
+
+<div class="section">
+  <div class="sectionTitle">备注</div>
+  <textarea id="note" class="note" maxlength="200"
+    placeholder="例如：不要香菜、少辣、打包请分开装……"></textarea>
+</div>
+
+<div class="totalBox">
+  <span class="totalLabel">订单合计</span>
+  <span class="total" id="sheetTotal">₩0</span>
+</div>
+
+<button id="submitBtn" class="submit" onclick="submitOrder()">
+  确认下单
+</button>
+```
+
+  </div>
+</div>
+
+<div id="successOverlay" class="overlay">
+  <div class="sheet">
+
+```
+<div class="success">
+  <div class="successIcon">✅</div>
+  <h2>下单成功</h2>
+  <p>您的订单已经发送到后厨。</p>
+
+  <div class="orderNumber">
+    订单号：<span id="orderId"></span>
+  </div>
+
+  <button class="submit" onclick="closeSuccess()">
+    继续点餐
+  </button>
+</div>
+```
+
+  </div>
+</div>
 
 <script>
+const won = n => "₩" + Number(n || 0).toLocaleString("ko-KR");
 
-let table = 1;
+const params = new URLSearchParams(location.search);
+const table = Math.min(30, Math.max(1, Number(params.get("table")) || 1));
 
 let menu = [];
-
 let cart = {};
+let currentCategory = "全部";
+let orderType = "DINE_IN";
 
-let type = "DINE_IN";
+const tableBadge = document.getElementById("tableBadge");
+const menuBox = document.getElementById("menu");
+const categoriesBox = document.getElementById("categories");
 
-let submitting = false;
+tableBadge.textContent = orderType === "DINE_IN"
+  ? table + "号桌"
+  : "打包";
 
-let orderSuccess = false;
+function setType(type){
+  orderType = type;
 
+  document.getElementById("dineBtn").classList.toggle("active", type === "DINE_IN");
+  document.getElementById("takeBtn").classList.toggle("active", type === "TAKEOUT");
 
-/* ==============================
-   工具
-   ============================== */
-
-function won(number){
-
-  return Number(number || 0)
-    .toLocaleString("ko-KR");
-
+  tableBadge.textContent = type === "DINE_IN"
+    ? table + "号桌"
+    : "打包";
 }
 
-
 function escapeHtml(value){
-
   return String(value ?? "")
     .replace(/&/g,"&amp;")
     .replace(/</g,"&lt;")
     .replace(/>/g,"&gt;")
     .replace(/"/g,"&quot;")
     .replace(/'/g,"&#039;");
-
 }
 
+function imageUrl(item){
+  /*
+    server.js 如果给菜品保存了 photo / image / imageUrl，
+    顾客端会自动读取。
+  */
+  return item.photo || item.image || item.imageUrl || "";
+}
 
-/* ==============================
-   获取桌号
-   ============================== */
+function renderCategories(){
 
-function getTable(){
+  const cats = ["全部", ...new Set(
+    menu.map(x => x.category).filter(Boolean)
+  )];
 
-  const params =
-    new URLSearchParams(
-      location.search
-    );
+  categoriesBox.innerHTML = cats.map(cat => `
+    <button
+      class="catBtn ${cat === currentCategory ? "active" : ""}"
+      onclick="chooseCategory(${JSON.stringify(cat)})">
+      ${escapeHtml(cat)}
+    </button>
+  `).join("");
+}
 
-  const value =
-    Number(params.get("table"));
+function chooseCategory(cat){
+  currentCategory = cat;
+  renderCategories();
+  renderMenu();
+}
 
-  if(
-    Number.isFinite(value) &&
-    value >= 1 &&
-    value <= 30
-  ){
-
-    return Math.floor(value);
-
+function getFilteredMenu(){
+  if(currentCategory === "全部"){
+    return menu;
   }
 
-  return 1;
-
+  return menu.filter(x => x.category === currentCategory);
 }
-
-
-/* ==============================
-   初始化
-   ============================== */
-
-async function init(){
-
-  table = getTable();
-
-  document
-    .getElementById("tableBadge")
-    .textContent =
-      `${table}번 테이블 · ${table}号桌`;
-
-  try{
-
-    const response =
-      await fetch("/api/menu",{
-        cache:"no-store"
-      });
-
-    if(!response.ok){
-
-      throw new Error(
-        "菜单加载失败"
-      );
-
-    }
-
-    menu =
-      await response.json();
-
-    renderMenu();
-
-  }catch(error){
-
-    console.error(error);
-
-    document
-      .getElementById("menu")
-      .innerHTML = `
-        <div class="error">
-          菜单加载失败，请刷新页面重试。<br>
-          메뉴를 불러오지 못했습니다.
-        </div>
-      `;
-
-  }
-
-}
-
-
-/* ==============================
-   菜单
-   ============================== */
 
 function renderMenu(){
 
-  const container =
-    document.getElementById("menu");
+  const list = getFilteredMenu();
 
-  if(!Array.isArray(menu) || !menu.length){
-
-    container.innerHTML = `
+  if(!list.length){
+    menuBox.innerHTML = `
       <div class="empty">
-        暂无可点菜品<br>
-        주문 가능한 메뉴가 없습니다.
+        暂无可售菜品
       </div>
     `;
-
     return;
-
   }
 
-  container.innerHTML = `
-    <div class="cat">
-      대표 메뉴 · 主打
-    </div>
+  menuBox.innerHTML = list.map(item => {
 
-    ${menu.map((item,index)=>{
+    const qty = Number(cart[item.id] || 0);
+    const img = imageUrl(item);
 
-      const emoji =
-        escapeHtml(
-          item.emoji || "🍽️"
-        );
+    const photoHtml = img
+      ? `<img src="${escapeHtml(img)}"
+              alt="${escapeHtml(item.name)}"
+              onerror="this.parentElement.innerHTML='${escapeHtml(item.emoji || "🍽️")}'">`
+      : escapeHtml(item.emoji || "🍽️");
 
-      const name =
-        escapeHtml(
-          item.name || "未命名菜品"
-        );
+    return `
+      <div class="menuItem">
 
-      const kr =
-        escapeHtml(
-          item.kr || ""
-        );
+        <div class="photo">
+          ${photoHtml}
+        </div>
 
-      const price =
-        won(item.price);
+        <div class="info">
 
-      return `
-
-        <div class="card">
-
-          <div class="pic">
-            ${emoji}
+          <div class="name">
+            ${escapeHtml(item.name)}
           </div>
 
-          <div class="info">
-
-            <div class="name">
-              ${name}
-            </div>
-
-            ${
-              kr
-                ? `<div class="kr">${kr}</div>`
-                : ""
-            }
-
-            <div class="price">
-              ₩${price}
-            </div>
-
+          <div class="kr">
+            ${escapeHtml(item.kr || "")}
           </div>
 
-          <button
-            class="add"
-            onclick="add(${index})"
-            aria-label="添加"
-          >
-            +
-          </button>
+          ${
+            item.category
+            ? `<div class="category">${escapeHtml(item.category)}</div>`
+            : ""
+          }
+
+          <div class="price">
+            ${won(item.price)}
+          </div>
+
+          ${
+            qty > 0
+            ? `
+              <div class="qtyBox">
+
+                <button
+                  class="qtyBtn"
+                  onclick="changeQty('${escapeHtml(item.id)}',-1)">
+                  −
+                </button>
+
+                <span class="qtyNum">${qty}</span>
+
+                <button
+                  class="qtyBtn"
+                  onclick="changeQty('${escapeHtml(item.id)}',1)">
+                  ＋
+                </button>
+
+              </div>
+            `
+            : `
+              <button
+                class="addBtn"
+                onclick="changeQty('${escapeHtml(item.id)}',1)">
+                加入订单
+              </button>
+            `
+          }
 
         </div>
 
-      `;
-
-    }).join("")}
-  `;
-
+      </div>
+    `;
+  }).join("");
 }
 
+function changeQty(id, delta){
 
-/* ==============================
-   加入购物车
-   ============================== */
-
-function add(index){
-
-  const item = menu[index];
+  const item = menu.find(x => x.id === id);
 
   if(!item) return;
 
-  const id = item.id;
+  const oldQty = Number(cart[id] || 0);
+  const newQty = Math.max(0, oldQty + delta);
 
-  cart[id] =
-    Math.min(
-      99,
-      (cart[id] || 0) + 1
-    );
-
-  updateCount();
-
-}
-
-
-/* ==============================
-   数量修改
-   ============================== */
-
-function change(id, delta){
-
-  if(!cart[id]) return;
-
-  cart[id] += delta;
-
-  if(cart[id] <= 0){
-
+  if(newQty === 0){
     delete cart[id];
-
+  }else{
+    cart[id] = newQty;
   }
 
-  updateCount();
-
-  renderCart();
-
+  renderMenu();
+  updateCartBar();
 }
 
+function getCartItems(){
 
-/* ==============================
-   购物车数量
-   ============================== */
+  return Object.keys(cart)
+    .map(id => {
 
-function getCartCount(){
+      const item = menu.find(x => x.id === id);
 
-  return Object.values(cart)
-    .reduce(
-      (sum, qty) =>
-        sum + Number(qty || 0),
-      0
-    );
+      if(!item) return null;
 
+      return {
+        ...item,
+        qty:Number(cart[id] || 0)
+      };
+
+    })
+    .filter(Boolean);
 }
 
+function getCartTotal(){
 
-function updateCount(){
-
-  document
-    .getElementById("count")
-    .textContent =
-      getCartCount();
-
+  return getCartItems()
+    .reduce((sum,item) => {
+      return sum + Number(item.price) * item.qty;
+    },0);
 }
 
+function updateCartBar(){
 
-/* ==============================
-   打开购物车
-   ============================== */
+  const items = getCartItems();
+
+  const count = items.reduce((sum,item) => {
+    return sum + item.qty;
+  },0);
+
+  document.getElementById("cartCount").textContent = count;
+  document.getElementById("cartTotal").textContent = won(getCartTotal());
+}
 
 function openCart(){
 
-  document
-    .getElementById("overlay")
-    .classList.add("show");
+  const items = getCartItems();
+
+  if(!items.length){
+    alert("请先选择菜品");
+    return;
+  }
 
   renderCart();
 
+  document.getElementById("cartOverlay").classList.add("show");
 }
-
-
-/* ==============================
-   关闭购物车
-   ============================== */
 
 function closeCart(){
-
-  document
-    .getElementById("overlay")
-    .classList.remove("show");
-
+  document.getElementById("cartOverlay").classList.remove("show");
 }
 
+function overlayClick(e){
 
-/* ==============================
-   点击背景关闭
-   ============================== */
-
-function handleOverlayClick(event){
-
-  if(
-    event.target.id === "overlay"
-  ){
-
+  if(e.target.id === "cartOverlay"){
     closeCart();
-
   }
-
 }
-
-
-/* ==============================
-   堂食 / 打包
-   ============================== */
-
-function setType(value){
-
-  type = value;
-
-  document
-    .getElementById("dine")
-    .className =
-      value === "DINE_IN"
-        ? "on"
-        : "";
-
-  document
-    .getElementById("take")
-    .className =
-      value === "TAKEOUT"
-        ? "on"
-        : "";
-
-}
-
-
-/* ==============================
-   渲染购物车
-   ============================== */
 
 function renderCart(){
 
-  const container =
-    document.getElementById("cart");
+  const items = getCartItems();
 
-  let total = 0;
+  const box = document.getElementById("cartList");
 
-  const entries =
-    Object.entries(cart);
+  box.innerHTML = items.map(item => `
+    <div class="cartRow">
 
-  if(!entries.length){
+      <div class="cartRowInfo">
 
-    container.innerHTML = `
-      <div class="empty-cart">
-        选择的菜单为空<br>
-        선택한 메뉴가 없습니다.
-      </div>
-    `;
-
-    document
-      .getElementById("total")
-      .textContent = "0";
-
-    return;
-
-  }
-
-
-  let html = "";
-
-  entries.forEach(
-    ([id, quantity])=>{
-
-      const item =
-        menu.find(
-          x => x.id === id
-        );
-
-      if(!item) return;
-
-      const qty =
-        Number(quantity) || 0;
-
-      const price =
-        Number(item.price) || 0;
-
-      total +=
-        price * qty;
-
-      html += `
-
-        <div class="row">
-
-          <div class="row-info">
-
-            <div class="row-name">
-              ${escapeHtml(
-                item.name
-              )}
-            </div>
-
-            <div class="row-detail">
-              ${escapeHtml(
-                item.kr || ""
-              )}
-              · ₩${won(price)}
-            </div>
-
-          </div>
-
-          <div class="qty">
-
-            <button
-              onclick="change('${escapeHtml(id)}',-1)"
-            >
-              −
-            </button>
-
-            <span>
-              ${qty}
-            </span>
-
-            <button
-              onclick="change('${escapeHtml(id)}',1)"
-            >
-              ＋
-            </button>
-
-          </div>
-
+        <div class="cartRowName">
+          ${escapeHtml(item.name)}
         </div>
 
-      `;
+        <div class="cartRowPrice">
+          ${won(item.price)} × ${item.qty}
+        </div>
 
-    }
-  );
+      </div>
 
+      <div class="cartRowQty">
 
-  container.innerHTML = html;
+        <button
+          class="smallQty"
+          onclick="changeCartQty('${escapeHtml(item.id)}',-1)">
+          −
+        </button>
 
-  document
-    .getElementById("total")
-    .textContent =
-      won(total);
+        <b>${item.qty}</b>
 
+        <button
+          class="smallQty"
+          onclick="changeCartQty('${escapeHtml(item.id)}',1)">
+          ＋
+        </button>
+
+      </div>
+
+    </div>
+  `).join("");
+
+  document.getElementById("sheetTotal").textContent =
+    won(getCartTotal());
 }
 
+function changeCartQty(id,delta){
 
-/* ==============================
-   创建订单
-   ============================== */
+  changeQty(id,delta);
+
+  if(getCartItems().length === 0){
+    closeCart();
+    return;
+  }
+
+  renderCart();
+}
 
 async function submitOrder(){
 
-  if(submitting){
+  const items = getCartItems();
 
+  if(!items.length){
+    alert("购物车是空的");
     return;
-
   }
 
+  const btn = document.getElementById("submitBtn");
 
-  if(
-    !Object.keys(cart).length
-  ){
+  btn.disabled = true;
+  btn.textContent = "正在提交……";
 
-    alert(
-      "메뉴를 선택해 주세요.\n请先选择菜品。"
-    );
-
-    return;
-
-  }
-
-
-  const items =
-    Object.entries(cart)
-      .map(
-        ([id,qty])=>({
-
-          id,
-
-          qty:
-            Math.min(
-              99,
-              Math.max(
-                1,
-                Math.floor(
-                  Number(qty) || 1
-                )
-              )
-            )
-
-        })
-      );
-
-
-  const note =
-    document
-      .getElementById("note")
-      .value
-      .trim();
-
-
-  submitting = true;
-
-
-  const button =
-    document
-      .getElementById(
-        "submitButton"
-      );
-
-  button.disabled = true;
-
-  button.textContent =
-    "订单提交中...";
-
+  const payload = {
+    table,
+    type:orderType,
+    note:document.getElementById("note").value.trim(),
+    items:items.map(item => ({
+      id:item.id,
+      qty:item.qty
+    }))
+  };
 
   try{
 
-    const response =
-      await fetch(
-        "/api/orders",
-        {
-          method:"POST",
+    const response = await fetch("/api/orders",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify(payload)
+    });
 
-          headers:{
-            "Content-Type":
-              "application/json"
-          },
-
-          body:
-            JSON.stringify({
-
-              table,
-
-              items,
-
-              note,
-
-              type
-
-            })
-        }
-      );
-
-
-    const data =
-      await response.json();
-
+    const data = await response.json();
 
     if(!response.ok){
-
-      throw new Error(
-        data.error ||
-        "订单提交失败"
-      );
-
+      throw new Error(data.error || "下单失败");
     }
-
-
-    /*
-     * 订单提交成功
-     */
 
     cart = {};
 
-    updateCount();
+    document.getElementById("note").value = "";
 
-    showSuccess(
-      data
-    );
+    updateCartBar();
+    renderMenu();
 
+    closeCart();
+
+    document.getElementById("orderId").textContent =
+      data.id || "已提交";
+
+    document.getElementById("successOverlay").classList.add("show");
 
   }catch(error){
 
     console.error(error);
 
     alert(
-      "订单提交失败，请检查网络后重试。\n" +
-      "주문에 실패했습니다."
+      "下单失败，请检查网络后重试。\n" +
+      (error.message || "")
     );
 
   }finally{
 
-    submitting = false;
-
-    button.disabled = false;
-
-    button.textContent =
-      "주문하기";
+    btn.disabled = false;
+    btn.textContent = "确认下单";
 
   }
-
 }
 
+function closeSuccess(){
+  document.getElementById("successOverlay").classList.remove("show");
+}
 
-/* ==============================
-   成功页面
-   ============================== */
+async function loadMenu(){
 
-function showSuccess(order){
+  try{
 
-  orderSuccess = true;
+    const response = await fetch("/api/menu");
 
-  const sheet =
-    document.querySelector(
-      ".sheet"
-    );
+    if(!response.ok){
+      throw new Error("菜单加载失败");
+    }
 
-  const orderId =
-    escapeHtml(
-      order?.id || ""
-    );
+    const data = await response.json();
 
-  const total =
-    won(order?.total || 0);
+    menu = Array.isArray(data) ? data : [];
 
-  sheet.innerHTML = `
+    renderCategories();
+    renderMenu();
+    updateCartBar();
 
-    <div class="success">
+  }catch(error){
 
-      <div class="success-icon">
-        ✅
+    console.error(error);
+
+    menuBox.innerHTML = `
+      <div class="error">
+        菜单加载失败，请刷新页面重试。
       </div>
-
-      <h2>
-        주문이 접수되었습니다
-      </h2>
-
-      <p>
-        주문이 정상적으로 접수되었습니다.<br>
-        직원이 확인 후 준비해 드립니다.
-      </p>
-
-      <div class="success-order">
-
-        주문번호 · ${orderId}<br>
-
-        테이블 · ${table}号桌<br>
-
-        합계 · ₩${total}
-
-      </div>
-
-      <button
-        class="submit"
-        onclick="finishSuccess()"
-      >
-        메뉴로 돌아가기
-      </button>
-
-    </div>
-
-  `;
-
+    `;
+  }
 }
 
-
-/* ==============================
-   成功后返回菜单
-   ============================== */
-
-function finishSuccess(){
-
-  const sheet =
-    document.querySelector(
-      ".sheet"
-    );
-
-  sheet.innerHTML = `
-
-    <div class="sheet-head">
-
-      <h2>주문 확인</h2>
-
-      <button
-        class="close"
-        onclick="closeCart()"
-      >
-        ×
-      </button>
-
-    </div>
-
-    <div class="type">
-
-      <button
-        id="dine"
-        class="on"
-        onclick="setType('DINE_IN')"
-      >
-        🍚 매장식사
-      </button>
-
-      <button
-        id="take"
-        onclick="setType('TAKEOUT')"
-      >
-        🥡 포장
-      </button>
-
-    </div>
-
-    <div
-      id="cart"
-      class="cart-list"
-    ></div>
-
-    <div class="total">
-      합계 ₩
-      <span id="total">0</span>
-    </div>
-
-    <label class="note-label">
-      요청사항 / 요청사항
-    </label>
-
-    <textarea
-      id="note"
-      class="note"
-      maxlength="200"
-      placeholder="예: 고수 빼주세요 / 덜 맵게 해주세요"
-    ></textarea>
-
-    <button
-      id="submitButton"
-      class="submit"
-      onclick="submitOrder()"
-    >
-      주문하기
-    </button>
-
-  `;
-
-  orderSuccess = false;
-
-  renderCart();
-
-}
-
-
-/* ==============================
-   初始化
-   ============================== */
-
-init();
-
+loadMenu();
 </script>
 
 </body>
 </html>
-```
