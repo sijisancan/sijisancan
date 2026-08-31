@@ -23,7 +23,42 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==="POST"&&p.startsWith("/api/orders/")&&p.endsWith("/status")){if(!authed(req))return json(res,401,{error:"unauthorized"});let id=p.split("/")[3],b=await parseBody(req),os=read("orders.json"),o=os.find(x=>x.id===id);if(!o)return json(res,404,{error:"not found"});o.status=b.status;write("orders.json",os);return json(res,200,o)}
  if(req.method==="DELETE"&&p.startsWith("/api/orders/")){if(!authed(req))return json(res,401,{error:"unauthorized"});let id=p.split("/")[3],os=read("orders.json").filter(x=>x.id!==id);write("orders.json",os);return json(res,200,{ok:true})}
  if(req.method==="GET"&&p==="/api/menu/all"){if(!authed(req))return json(res,401,{error:"unauthorized"});return json(res,200,read("menu.json"))}
- if(req.method==="POST"&&p==="/api/menu"){if(!authed(req))return json(res,401,{error:"unauthorized"});let b=await parseBody(req),ms=read("menu.json"),i=ms.findIndex(x=>x.id===b.id);if(i<0)return json(res,404,{error:"not found"});ms[i].name=String(b.name||ms[i].name);ms[i].kr=String(b.kr||ms[i].kr);ms[i].price=Math.max(0,Number(b.price)||0);ms[i].on=!!b.on;write("menu.json",ms);return json(res,200,ms[i])}
+ if(req.method==="POST"&&p==="/api/menu"){
+  if(!authed(req))return json(res,401,{error:"unauthorized"});
+
+  let b=await parseBody(req);
+  let ms=read("menu.json");
+
+  if(!b.id){
+    let item={
+      id:"menu-"+Date.now().toString(36),
+      name:String(b.name||"新菜品"),
+      kr:String(b.kr||""),
+      price:Math.max(0,Number(b.price)||0),
+      emoji:String(b.emoji||"🍽️"),
+      on:b.on!==false
+    };
+
+    ms.push(item);
+    write("menu.json",ms);
+
+    return json(res,201,item);
+  }
+
+  let i=ms.findIndex(x=>x.id===b.id);
+
+  if(i<0)return json(res,404,{error:"not found"});
+
+  ms[i].name=String(b.name||ms[i].name);
+  ms[i].kr=String(b.kr||ms[i].kr);
+  ms[i].price=Math.max(0,Number(b.price)||0);
+  ms[i].emoji=String(b.emoji||ms[i].emoji||"🍽️");
+  ms[i].on=!!b.on;
+
+  write("menu.json",ms);
+
+  return json(res,200,ms[i]);
+}
  if(req.method==="GET"&&p==="/api/qr"){let table=Math.min(30,Math.max(1,Number(u.query.table)||1)),base=`${req.headers["x-forwarded-proto"]||"http"}://${req.headers.host}`,target=`${base}/?table=${table}`;let svg=await QRCode.toString(target,{type:"svg",margin:2,width:360});return send(res,200,"image/svg+xml; charset=utf-8",svg)}
  if(req.method==="GET"&&p==="/api/stats"){if(!authed(req))return json(res,401,{error:"unauthorized"});let os=read("orders.json"),done=os.filter(x=>x.status==="DONE"),today=new Date().toISOString().slice(0,10),tod=os.filter(x=>x.createdAt.startsWith(today));return json(res,200,{orders:os.length,todayOrders:tod.length,todaySales:tod.reduce((s,x)=>s+x.total,0),doneSales:done.reduce((s,x)=>s+x.total,0)})}
  let file=p==="/"?"/index.html":p==="/admin"?"/admin.html":p; let f=path.join(ROOT,"public",path.normalize(file));
