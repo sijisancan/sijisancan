@@ -4,7 +4,41 @@
 <script>
 const won=n=>Number(n).toLocaleString("ko-KR");let app=document.getElementById("app");
 async function login(){let p=document.getElementById("pw").value,r=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:p})});if(r.ok)dashboard();else alert("密码错误")}
-async function dashboard(){app.innerHTML=`<div class="toolbar"><button class="btn" onclick="load()">🔄 刷新</button><button class="btn" onclick="logout()">退出</button></div><div id="stats" class="stats"></div><div id="orders" class="orders"></div><div class="menu"><h3>菜单管理</h3><div id="menu"></div></div><div class="qr"><h3>30张桌子二维码</h3><div class="qrs" id="qrs"></div></div>`;for(let i=1;i<=30;i++)qrs.innerHTML+=`<div><img src="/api/qr?table=${i}"><br>${i}号桌</div>`;load();loadMenu();setInterval(load,3000)}
+async function dashboard(){app.innerHTML=`<div class="toolbar"><button class="btn" onclick="load()">🔄 刷新</button><button class="btn" onclick="logout()">退出</button></div><div id="stats" class="stats"></div><div id="orders" class="orders"></div>```html
+<div class="menu">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3 style="margin:0">菜单管理</h3>
+    <button class="btn" onclick="showAddMenu()">＋ 新增菜品</button>
+  </div>
+
+  <div id="addMenuBox" style="display:none;background:#f5f3ef;padding:15px;border-radius:12px;margin-bottom:15px">
+    <h4>新增菜品</h4>
+
+    <input id="newName" placeholder="菜品名称"
+      style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:8px">
+
+    <input id="newKr" placeholder="韩文名称"
+      style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:8px">
+
+    <input id="newPrice" type="number" placeholder="价格，例如 11000"
+      style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:8px">
+
+    <input id="newEmoji" placeholder="Emoji，例如 🍜" value="🍽️"
+      style="width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:8px">
+
+    <label style="display:block;margin:10px 0">
+      <input id="newOn" type="checkbox" checked>
+      立即上架
+    </label>
+
+    <button class="btn" onclick="addMenu()">保存菜品</button>
+    <button class="btn" style="background:#777" onclick="hideAddMenu()">取消</button>
+  </div>
+
+  <div id="menu"></div>
+</div>
+```
+<div class="qr"><h3>30张桌子二维码</h3><div class="qrs" id="qrs"></div></div>`;for(let i=1;i<=30;i++)qrs.innerHTML+=`<div><img src="/api/qr?table=${i}"><br>${i}号桌</div>`;load();loadMenu();setInterval(load,3000)}
 async function load(){let r=await fetch("/api/orders");if(r.status===401)return location.reload();let os=await r.json();os.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));orders.innerHTML=os.map(o=>`<div class="order ${o.status==="NEW"?"new":""}"><div class="head"><span>${o.type==="TAKEOUT"?"🥡":"🪑"} ${o.table}号桌</span><span>₩${won(o.total)}</span></div><small>${new Date(o.createdAt).toLocaleString()}</small><div>${o.items.map(x=>`<div class="item"><span>${x.name}</span><b>×${x.qty}</b></div>`).join("")}</div>${o.note?`<div>📝 ${o.note}</div>`:""}<div class="status"><button onclick="status('${o.id}','NEW')">新订单</button><button onclick="status('${o.id}','COOKING')">制作中</button><button onclick="status('${o.id}','DONE')">完成</button><button onclick="delOrder('${o.id}')">删除</button></div></div>`).join("")||"<p>暂无订单</p>";let s=await fetch("/api/stats").then(r=>r.json());stats.innerHTML=`<div class="stat">今日订单<b>${s.todayOrders}</b></div><div class="stat">今日营业额<b>₩${won(s.todaySales)}</b></div><div class="stat">完成订单营业额<b>₩${won(s.doneSales)}</b></div>`}
 async function status(id,s){await fetch("/api/orders/"+id+"/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:s})});load()}async function delOrder(id){if(confirm("确定删除这笔订单？")){await fetch("/api/orders/"+id,{method:"DELETE"});load()}}
 async function loadMenu(){let ms=await fetch("/api/menu/all").then(r=>r.json());menu.innerHTML=ms.map(x=>`<div class="menuRow"><span class="name">${x.emoji} ${x.name} / ${x.kr}</span><input id="p-${x.id}" value="${x.price}" type="number"><label><input id="o-${x.id}" type="checkbox" ${x.on?"checked":""}> 上架</label><button class="btn" onclick="saveMenu('${x.id}')">保存</button></div>`).join("")}
