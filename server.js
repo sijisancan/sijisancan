@@ -7,12 +7,14 @@ const QRCode = require("qrcode");
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, "public");
-const UPLOADS = path.join(PUBLIC, "uploads");
+const BUNDLED_UPLOADS = path.join(PUBLIC, "uploads");
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : ROOT;
+const UPLOADS = path.join(DATA_DIR, "uploads");
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "123456";
 
-const MENU_FILE = path.join(ROOT, "menu.json");
-const ORDERS_FILE = path.join(ROOT, "orders.json");
+const MENU_FILE = path.join(DATA_DIR, "menu.json");
+const ORDERS_FILE = path.join(DATA_DIR, "orders.json");
 
 const sessions = new Set();
 
@@ -23,13 +25,38 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 // 初始化
 // =====================================================
 
-if (!fs.existsSync(PUBLIC)) {
-  fs.mkdirSync(PUBLIC, { recursive: true });
+function ensureDirectory(dir) {
+  if (fs.existsSync(dir)) {
+    const stat = fs.statSync(dir);
+    if (!stat.isDirectory()) {
+      const backup = dir + ".invalid-" + Date.now();
+      fs.renameSync(dir, backup);
+      console.warn("发现同名文件，已自动移走:", backup);
+    }
+  }
+  fs.mkdirSync(dir, { recursive: true });
 }
 
-if (!fs.existsSync(UPLOADS)) {
-  fs.mkdirSync(UPLOADS, { recursive: true });
+ensureDirectory(PUBLIC);
+ensureDirectory(DATA_DIR);
+ensureDirectory(UPLOADS);
+
+// 如果使用 Render Persistent Disk 且磁盘里还没有数据，先复制仓库中的初始 JSON。
+function seedDataFile(target, bundled, fallback) {
+  if (fs.existsSync(target)) return;
+  try {
+    if (fs.existsSync(bundled) && fs.statSync(bundled).isFile()) {
+      fs.copyFileSync(bundled, target);
+      return;
+    }
+  } catch (e) {
+    console.error("初始化数据文件失败:", e);
+  }
+  fs.writeFileSync(target, JSON.stringify(fallback, null, 2), "utf8");
 }
+
+seedDataFile(MENU_FILE, path.join(ROOT, "menu.json"), []);
+seedDataFile(ORDERS_FILE, path.join(ROOT, "orders.json"), []);
 
 // =====================================================
 // JSON
@@ -2044,6 +2071,50 @@ const server =
         }
 
         // =================================================
+        // 上传图片静态访问（V5 修复）
+        // 图片实际保存到 DATA_DIR/uploads，不再依赖 public/uploads。
+        // 同时兼容旧版已经放在 public/uploads 中的图片。
+        // =================================================
+
+        if (req.method === "GET" && p.startsWith("/uploads/")) {
+          let filename;
+          try {
+            filename = path.basename(decodeURIComponent(p));
+          } catch (e) {
+            return send(res, 400, "text/plain; charset=utf-8", "Bad request");
+          }
+
+          if (!filename) {
+            return send(res, 404, "text/plain; charset=utf-8", "Not found");
+          }
+
+          const runtimeFile = path.join(UPLOADS, filename);
+          let bundledFile = null;
+          try {
+            if (fs.existsSync(BUNDLED_UPLOADS) && fs.statSync(BUNDLED_UPLOADS).isDirectory()) {
+              bundledFile = path.join(BUNDLED_UPLOADS, filename);
+            }
+          } catch (e) {}
+
+          let target = runtimeFile;
+          if (!fs.existsSync(target) && bundledFile && fs.existsSync(bundledFile)) {
+            target = bundledFile;
+          }
+
+          return fs.readFile(target, (error, data) => {
+            if (error) {
+              return send(res, 404, "text/plain; charset=utf-8", "Not found");
+            }
+            const ext = path.extname(target).toLowerCase();
+            const imageTypes = {
+              ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg",
+              ".webp":"image/webp", ".gif":"image/gif"
+            };
+            return send(res, 200, imageTypes[ext] || "application/octet-stream", data);
+          });
+        }
+
+        // =================================================
         // 静态文件
         // =================================================
 
@@ -2201,6 +2272,11 @@ server.listen(
     console.log(
       "图片目录:",
       UPLOADS
+    );
+
+    console.log(
+      "数据目录:",
+      DATA_DIR
     );
   }
 );
