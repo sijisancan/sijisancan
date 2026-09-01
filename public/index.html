@@ -990,7 +990,7 @@ async function loadMenu(){
 
   try{
 
-    const response = await fetch("/api/menu");
+    const response = await fetch("/api/menu", { cache:"no-store" });
 
     if(!response.ok){
       throw new Error("菜单加载失败");
@@ -1017,6 +1017,24 @@ async function loadMenu(){
 }
 
 loadMenu();
+
+// V5：后台新增/修改/上下架菜单后，顾客页面约 5 秒内自动同步。
+setInterval(async () => {
+  try {
+    const response = await fetch("/api/menu", { cache:"no-store" });
+    if (!response.ok) return;
+    const data = await response.json();
+    const next = Array.isArray(data) ? data : [];
+    if (JSON.stringify(next) !== JSON.stringify(menu)) {
+      menu = next;
+      renderCategories();
+      renderMenu();
+      updateCartBar();
+    }
+  } catch (e) {
+    // 后台轮询失败时不打扰正在点餐的顾客，下次继续尝试。
+  }
+}, 5000);
 </script>
 
 </body>
