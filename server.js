@@ -16,7 +16,9 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "123456";
 const MENU_FILE = path.join(DATA_DIR, "menu.json");
 const ORDERS_FILE = path.join(DATA_DIR, "orders.json");
 
-const sessions = new Set();
+const sessions = new Set(); // 兼容旧版临时会话
+const LOGIN_DAYS = 30;
+const AUTH_SECRET = process.env.SESSION_SECRET || crypto.createHash("sha256").update("sijisancan-v62:" + ADMIN_PASSWORD).digest("hex");
 
 const MAX_BODY_SIZE = 15 * 1024 * 1024; // 15MB
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -140,13 +142,34 @@ function getCookie(req, name) {
   return match ? match[1] : "";
 }
 
-function authed(req) {
-  const sid = getCookie(req, "sid");
+function makeAuthToken(exp) {
+  const payload = String(exp);
+  const sig = crypto.createHmac("sha256", AUTH_SECRET).update(payload).digest("hex");
+  return payload + "." + sig;
+}
 
-  return !!(
-    sid &&
-    sessions.has(sid)
-  );
+function validAuthToken(token) {
+  try {
+    const parts = String(token || "").split(".");
+    if (parts.length !== 2) return false;
+    const exp = Number(parts[0]);
+    if (!Number.isFinite(exp) || Date.now() > exp) return false;
+    const expected = crypto.createHmac("sha256", AUTH_SECRET).update(parts[0]).digest("hex");
+    const a = Buffer.from(parts[1], "utf8");
+    const b = Buffer.from(expected, "utf8");
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch (_) {
+    return false;
+  }
+}
+
+function authed(req) {
+  const auth = getCookie(req, "admin_auth");
+  if (validAuthToken(auth)) return true;
+
+  // 兼容 V6 旧版当前进程中的 sid
+  const sid = getCookie(req, "sid");
+  return !!(sid && sessions.has(sid));
 }
 
 // =====================================================
@@ -921,18 +944,17 @@ const server =
             ) ===
             ADMIN_PASSWORD
           ) {
-            const sid =
-              crypto
-                .randomBytes(24)
-                .toString("hex");
-
+            const sid = crypto.randomBytes(24).toString("hex");
             sessions.add(sid);
 
+            const exp = Date.now() + LOGIN_DAYS * 24 * 60 * 60 * 1000;
+            const authToken = makeAuthToken(exp);
+
             res.writeHead(200, {
-              "Set-Cookie":
-                "sid=" +
-                sid +
-                "; HttpOnly; SameSite=Lax; Path=/",
+              "Set-Cookie": [
+                "admin_auth=" + authToken + "; Max-Age=" + (LOGIN_DAYS * 86400) + "; HttpOnly; SameSite=Lax; Path=/",
+                "sid=" + sid + "; HttpOnly; SameSite=Lax; Path=/"
+              ],
 
               "Content-Type":
                 "application/json; charset=utf-8",
@@ -979,8 +1001,10 @@ const server =
           }
 
           res.writeHead(200, {
-            "Set-Cookie":
-              "sid=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/",
+            "Set-Cookie": [
+              "admin_auth=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/",
+              "sid=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/"
+            ],
 
             "Content-Type":
               "application/json; charset=utf-8"
