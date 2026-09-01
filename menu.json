@@ -1,51 +1,243 @@
 [
   {
-    "id": "beef-noodle",
-    "name": "牛肉面",
-    "kr": "우육면",
+    "id": "clear_beef",
+    "name": "清汤牛肉面（牛腱子肉）",
+    "kr": "맑은 우육면 (소고기 사태)",
     "price": 11000,
     "emoji": "🍜",
-    "on": true
+    "image": "/uploads/menu_01_clear_beef.jpg",
+    "on": true,
+    "category": "面类"
   },
   {
-    "id": "huangmenji",
-    "name": "黄焖鸡",
-    "kr": "황먼지",
-    "price": 12000,
-    "emoji": "🍗",
-    "on": true
+    "id": "clear_beef_unlimited",
+    "name": "清汤牛肉面 大份（无限续面）",
+    "kr": "맑은 우육면 곱빼기 (면 무한리필)",
+    "price": 13000,
+    "emoji": "🍜",
+    "image": "/uploads/menu_02_clear_beef_unlimited.jpg",
+    "on": true,
+    "category": "面类"
   },
   {
-    "id": "zhajiang",
+    "id": "braised_beef",
+    "name": "红烧牛肉面",
+    "kr": "홍샤오 우육면",
+    "price": 11000,
+    "emoji": "🍜",
+    "image": "/uploads/menu_03_braised_beef.jpg",
+    "on": true,
+    "category": "面类"
+  },
+  {
+    "id": "braised_beef_unlimited",
+    "name": "红烧牛肉面 大份（无限续面）",
+    "kr": "홍샤오 우육면 곱빼기 (면 무한리필)",
+    "price": 13000,
+    "emoji": "🍜",
+    "image": "/uploads/menu_04_braised_beef_unlimited.jpg",
+    "on": true,
+    "category": "面类"
+  },
+  {
+    "id": "scallion_oil_noodle",
+    "name": "葱油面",
+    "kr": "총유면 (파기름 비빔면)",
+    "price": 9000,
+    "emoji": "🍜",
+    "image": "/uploads/menu_05_scallion_oil_noodle.jpg",
+    "on": true,
+    "category": "面类"
+  },
+  {
+    "id": "youpo_noodle",
+    "name": "油泼面",
+    "kr": "유포면",
+    "price": 9000,
+    "emoji": "🍜",
+    "image": "/uploads/menu_06_youpo_noodle.jpg",
+    "on": true,
+    "category": "面类"
+  },
+  {
+    "id": "beijing_zhajiang",
     "name": "北京炸酱面",
-    "kr": "베이징 자장면",
+    "kr": "베이징 짜장면",
     "price": 10000,
     "emoji": "🍜",
-    "on": true
+    "image": "/uploads/menu_07_beijing_zhajiang.jpg",
+    "on": true,
+    "category": "面类"
   },
   {
-    "id": "potsticker",
-    "name": "锅贴",
-    "kr": "군만두",
+    "id": "sesame_cold_noodle",
+    "name": "麻酱凉拌面",
+    "kr": "마장 비빔면",
+    "price": 10000,
+    "emoji": "🍜",
+    "image": "/uploads/menu_08_sesame_cold_noodle.jpg",
+    "on": true,
+    "category": "面类"
+  },
+  {
+    "id": "bone_broth_wonton_noodle",
+    "name": "骨汤馄饨面",
+    "kr": "사골 완탕면",
+    "price": 10000,
+    "emoji": "🍜",
+    "image": "/uploads/menu_09_bone_broth_wonton_noodle.jpg",
+    "on": true,
+    "category": "面类"
+  },
+  {
+    "id": "huangmenji_noodle",
+    "name": "黄焖鸡面",
+    "kr": "황먼지 면",
+    "price": 11000,
+    "emoji": "🍜",
+    "image": "/uploads/menu_10_huangmenji_noodle.jpg",
+    "on": true,
+    "category": "面类"
+  },
+  {
+    "id": "huangmenji_rice",
+    "name": "黄焖鸡米饭",
+    "kr": "황먼지 덮밥",
+    "price": 10000,
+    "emoji": "🍚",
+    "image": "/uploads/menu_11_huangmenji_rice.jpg",
+    "on": true,
+    "category": "主食"
+  },
+  {
+    "id": "potato_shreds",
+    "name": "炝拌土豆丝",
+    "kr": "새콤매콤 감자채무침",
+    "price": 5000,
+    "emoji": "🥗",
+    "image": "/uploads/menu_12_potato_shreds.jpg",
+    "on": true,
+    "category": "凉菜"
+  },
+  {
+    "id": "cucumber_youtiao",
+    "name": "黄瓜拌油条",
+    "kr": "오이 유탸오무침",
+    "price": 8000,
+    "emoji": "🥗",
+    "image": "/uploads/menu_13_cucumber_youtiao.jpg",
+    "on": true,
+    "category": "凉菜"
+  },
+  {
+    "id": "pig_ear_cucumber",
+    "name": "猪耳拌黄瓜",
+    "kr": "돼지귀 오이무침",
+    "price": 8000,
+    "emoji": "🥗",
+    "image": "/uploads/menu_14_pig_ear_cucumber.jpg",
+    "on": true,
+    "category": "凉菜"
+  },
+  {
+    "id": "lemon_boneless_chicken_feet_small",
+    "name": "柠檬无骨鸡爪（小份）",
+    "kr": "레몬 무뼈 닭발 (소)",
     "price": 7000,
-    "emoji": "🥟",
-    "on": true
+    "emoji": "🍗",
+    "image": "/uploads/menu_15_lemon_boneless_chicken_feet_small.jpg",
+    "on": true,
+    "category": "凉菜"
   },
   {
-    "id": "wonton",
-    "name": "馄饨",
-    "kr": "완탕",
-    "price": 7000,
-    "emoji": "🥟",
-    "on": true
+    "id": "lemon_boneless_chicken_feet_large",
+    "name": "柠檬无骨鸡爪（大份）",
+    "kr": "레몬 무뼈 닭발 (대)",
+    "price": 14000,
+    "emoji": "🍗",
+    "image": "/uploads/menu_16_lemon_boneless_chicken_feet_large.jpg",
+    "on": true,
+    "category": "凉菜"
   },
   {
-    "id": "cola",
-    "name": "可乐",
-    "kr": "콜라",
-    "price": 2000,
-    "emoji": "🥤",
-    "on": true
+    "id": "cold_beef",
+    "name": "凉拌牛肉",
+    "kr": "소고기 냉채",
+    "price": 18000,
+    "emoji": "🥩",
+    "image": "/uploads/menu_17_cold_beef.jpg",
+    "on": true,
+    "category": "凉菜"
+  },
+  {
+    "id": "dumpling_pork_scallion",
+    "name": "手工水饺－猪肉大葱",
+    "kr": "수제 물만두 - 돼지고기 대파",
+    "price": 8000,
+    "emoji": "🥟",
+    "image": "/uploads/menu_18_dumpling_pork_scallion.jpg",
+    "on": true,
+    "category": "饺子"
+  },
+  {
+    "id": "dumpling_pork_celery",
+    "name": "手工水饺－猪肉芹菜",
+    "kr": "수제 물만두 - 돼지고기 샐러리",
+    "price": 8000,
+    "emoji": "🥟",
+    "image": "/uploads/menu_19_dumpling_pork_celery.jpg",
+    "on": true,
+    "category": "饺子"
+  },
+  {
+    "id": "dumpling_pork_chive",
+    "name": "手工水饺－猪肉韭菜",
+    "kr": "수제 물만두 - 돼지고기 부추",
+    "price": 8000,
+    "emoji": "🥟",
+    "image": "/uploads/menu_20_dumpling_pork_chive.jpg",
+    "on": true,
+    "category": "饺子"
+  },
+  {
+    "id": "signature_tricolor_potsticker",
+    "name": "招牌三色锅贴（6只）",
+    "kr": "시그니처 삼색 군만두 (6개)",
+    "price": 8000,
+    "emoji": "🥟",
+    "image": "/uploads/menu_21_signature_tricolor_potsticker.jpg",
+    "on": true,
+    "category": "饺子"
+  },
+  {
+    "id": "cass",
+    "name": "Cass",
+    "kr": "카스",
+    "price": 5000,
+    "emoji": "🍺",
+    "image": "/uploads/menu_22_cass.jpg",
+    "on": true,
+    "category": "酒水"
+  },
+  {
+    "id": "terra",
+    "name": "Terra",
+    "kr": "테라",
+    "price": 5000,
+    "emoji": "🍺",
+    "image": "/uploads/menu_23_terra.jpg",
+    "on": true,
+    "category": "酒水"
+  },
+  {
+    "id": "kelly",
+    "name": "Kelly",
+    "kr": "켈리",
+    "price": 5000,
+    "emoji": "🍺",
+    "image": "/uploads/menu_24_kelly.jpg",
+    "on": true,
+    "category": "酒水"
   },
   {
     "id": "tsingtao",
@@ -53,26 +245,98 @@
     "kr": "칭따오 맥주",
     "price": 5000,
     "emoji": "🍺",
-    "on": true
+    "image": "/uploads/menu_25_tsingtao.jpg",
+    "on": true,
+    "category": "酒水"
   },
   {
-    "id": "menu",
-    "name": "鲜肉馄饨",
-    "kr": "고기 완탕",
-    "price": 9000,
-    "emoji": "🍽️",
-    "image": "/uploads/9b31e4539753d75be4b0bbf8f1e5ecbc.jpg",
+    "id": "harbin",
+    "name": "哈尔滨啤酒",
+    "kr": "하얼빈 맥주",
+    "price": 5000,
+    "emoji": "🍺",
+    "image": "/uploads/menu_26_harbin.jpg",
     "on": true,
-    "category": "馄饨"
+    "category": "酒水"
   },
   {
-    "id": "menu-2",
-    "name": "手工水饺",
-    "kr": "수제 만두",
-    "price": 9000,
-    "emoji": "🍽️",
-    "image": "/uploads/593ed33a9acdb170fd28ea931cd03bcd.jpg",
+    "id": "chamisul",
+    "name": "真露",
+    "kr": "참이슬",
+    "price": 4000,
+    "emoji": "🍶",
+    "image": "/uploads/menu_27_chamisul.jpg",
     "on": true,
-    "category": "水饺"
+    "category": "酒水"
+  },
+  {
+    "id": "cheoeumcheoreom",
+    "name": "初饮初乐",
+    "kr": "처음처럼",
+    "price": 4000,
+    "emoji": "🍶",
+    "image": "/uploads/menu_28_cheoeumcheoreom.jpg",
+    "on": true,
+    "category": "酒水"
+  },
+  {
+    "id": "coca_cola",
+    "name": "可口可乐",
+    "kr": "코카콜라",
+    "price": 3000,
+    "emoji": "🥤",
+    "image": "/uploads/menu_29_coca_cola.jpg",
+    "on": true,
+    "category": "饮料"
+  },
+  {
+    "id": "sprite",
+    "name": "雪碧",
+    "kr": "스프라이트",
+    "price": 3000,
+    "emoji": "🥤",
+    "image": "/uploads/menu_30_sprite.jpg",
+    "on": true,
+    "category": "饮料"
+  },
+  {
+    "id": "chapai",
+    "name": "茶π",
+    "kr": "차파이",
+    "price": 3000,
+    "emoji": "🥤",
+    "image": "/uploads/menu_31_chapai.jpg",
+    "on": true,
+    "category": "饮料"
+  },
+  {
+    "id": "ice_black_tea",
+    "name": "冰红茶",
+    "kr": "빙홍차",
+    "price": 3000,
+    "emoji": "🥤",
+    "image": "/uploads/menu_32_ice_black_tea.jpg",
+    "on": true,
+    "category": "饮料"
+  },
+  {
+    "id": "coconut_drink",
+    "name": "椰汁",
+    "kr": "코코넛 음료",
+    "price": 3000,
+    "emoji": "🥤",
+    "image": "/uploads/menu_33_coconut_drink.jpg",
+    "on": true,
+    "category": "饮料"
+  },
+  {
+    "id": "wanglaoji",
+    "name": "王老吉",
+    "kr": "왕라오지",
+    "price": 3000,
+    "emoji": "🥤",
+    "image": "/uploads/menu_34_wanglaoji.jpg",
+    "on": true,
+    "category": "饮料"
   }
 ]
