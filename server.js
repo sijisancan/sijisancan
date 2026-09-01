@@ -917,13 +917,11 @@ const server =
               []
             );
 
+          // V6.3：顾客端保留售罄菜品，由前端灰色显示并禁止下单
           return json(
             res,
             200,
-            menu.filter(
-              (item) =>
-                item.on !== false
-            )
+            menu
           );
         }
 
@@ -1015,6 +1013,27 @@ const server =
               ok: true
             })
           );
+        }
+
+        // =================================================
+        // V6.3 顾客：查看本设备已提交的订单
+        // 只按随机订单号查询，不允许按桌号枚举，避免看到其他客人的订单。
+        // =================================================
+
+        if (
+          req.method === "GET" &&
+          p === "/api/customer/orders"
+        ) {
+          const raw = String(requestUrl.searchParams.get("ids") || "");
+          const ids = raw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 50);
+          if (!ids.length) return json(res, 200, []);
+          const idSet = new Set(ids);
+          const orders = readJson(ORDERS_FILE, []);
+          const found = orders
+            .filter(o => idSet.has(String(o.id || "")))
+            .sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+            .map(orderDetail);
+          return json(res, 200, found);
         }
 
         // =================================================
