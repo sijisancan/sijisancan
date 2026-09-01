@@ -630,23 +630,27 @@ function deleteUploadedImage(imageUrl) {
 // 安全数值
 // =====================================================
 
+function koreaDateString(value = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(value);
+  const out = {};
+  for (const part of parts) out[part.type] = part.value;
+  return `${out.year}-${out.month}-${out.day}`;
+}
+
 function todayString() {
-  const now = new Date();
+  return koreaDateString(new Date());
+}
 
-  const y =
-    now.getFullYear();
-
-  const m =
-    String(
-      now.getMonth() + 1
-    ).padStart(2, "0");
-
-  const d =
-    String(
-      now.getDate()
-    ).padStart(2, "0");
-
-  return `${y}-${m}-${d}`;
+function isTodayKorea(order) {
+  if (!order || !order.createdAt) return false;
+  const d = new Date(order.createdAt);
+  if (Number.isNaN(d.getTime())) return false;
+  return koreaDateString(d) === todayString();
 }
 
 function safeTable(value) {
@@ -657,7 +661,7 @@ function safeTable(value) {
   }
 
   return Math.min(
-    30,
+    20,
     Math.max(
       1,
       Math.floor(n)
@@ -730,6 +734,12 @@ function orderDetail(order) {
     doneAt:
       order.doneAt || "",
 
+    paidAt:
+      order.paidAt || "",
+
+    cancelledAt:
+      order.cancelledAt || "",
+
     items:
       items.map((item) => {
         const price =
@@ -748,6 +758,12 @@ function orderDetail(order) {
           kr:
             item.kr || "",
 
+          variantId: item.variantId || "",
+          variantName: item.variantName || "",
+          variantKr: item.variantKr || "",
+          refillable: !!item.refillable,
+          kind: item.kind || "ITEM",
+
           qty,
 
           price,
@@ -758,7 +774,14 @@ function orderDetail(order) {
       }),
 
     total:
-      safePrice(order.total)
+      safePrice(order.total),
+
+    isRefill: !!order.isRefill,
+    parentOrderId: order.parentOrderId || "",
+    printState: order.printState || "PENDING",
+    printedAt: order.printedAt || "",
+    printCount: Number(order.printCount || 0),
+    printError: order.printError || ""
   };
 }
 
@@ -1023,25 +1046,13 @@ const server =
             );
           }
 
-          const today =
-            todayString();
-
           const orders =
             readJson(
               ORDERS_FILE,
               []
             );
 
-          const todayOrders =
-            orders.filter(
-              (order) =>
-                String(
-                  order.createdAt ||
-                  ""
-                ).startsWith(
-                  today
-                )
-            );
+          const todayOrders = orders.filter(isTodayKorea);
 
           return json(
             res,
@@ -1106,33 +1117,27 @@ const server =
                     return null;
                   }
 
-                  const qty =
-                    safeQty(
-                      item.qty
-                    );
-
-                  const price =
-                    safePrice(
-                      menuItem.price
-                    );
+                  const qty = safeQty(item.qty);
+                  const variants = Array.isArray(menuItem.variants) ? menuItem.variants : [];
+                  let variant = null;
+                  if (variants.length) {
+                    variant = variants.find(v => String(v.id) === String(item.variantId || ""));
+                    if (!variant) return null;
+                  }
+                  const price = safePrice(variant ? variant.price : menuItem.price);
 
                   return {
-                    id:
-                      menuItem.id,
-
-                    name:
-                      menuItem.name,
-
-                    kr:
-                      menuItem.kr ||
-                      "",
-
+                    id: menuItem.id,
+                    name: menuItem.name,
+                    kr: menuItem.kr || "",
+                    variantId: variant ? String(variant.id || "") : "",
+                    variantName: variant ? String(variant.name || "") : "",
+                    variantKr: variant ? String(variant.kr || "") : "",
+                    refillable: !!(variant && variant.refillable),
+                    kind: "ITEM",
                     qty,
-
                     price,
-
-                    subtotal:
-                      price * qty
+                    subtotal: price * qty
                   };
                 }
               )
@@ -1193,6 +1198,9 @@ const server =
             status:
               "NEW",
 
+            printState: "PENDING",
+            printCount: 0,
+
             createdAt:
               new Date().toISOString()
           };
@@ -1241,7 +1249,9 @@ const server =
           const allowed = [
             "NEW",
             "COOKING",
-            "DONE"
+            "DONE",
+            "PAID",
+            "CANCELLED"
           ];
 
           if (
@@ -1288,20 +1298,14 @@ const server =
           order.status =
             body.status;
 
-          if (
-            body.status ===
-              "DONE" &&
-            !order.doneAt
-          ) {
-            order.doneAt =
-              new Date().toISOString();
+          if (body.status === "DONE" && !order.doneAt) {
+            order.doneAt = new Date().toISOString();
           }
-
-          if (
-            body.status !==
-            "DONE"
-          ) {
-            delete order.doneAt;
+          if (body.status === "PAID" && !order.paidAt) {
+            order.paidAt = new Date().toISOString();
+          }
+          if (body.status === "CANCELLED" && !order.cancelledAt) {
+            order.cancelledAt = new Date().toISOString();
           }
 
           writeJson(
@@ -1544,6 +1548,20 @@ const server =
                 );
             }
 
+            if (body.variants !== undefined) {
+              let raw = body.variants;
+              if (typeof raw === "string") {
+                try { raw = JSON.parse(raw); } catch { raw = []; }
+              }
+              old.variants = Array.isArray(raw) ? raw.map((v, idx) => ({
+                id: String(v.id || `v${idx+1}`),
+                name: String(v.name || "").trim(),
+                kr: String(v.kr || "").trim(),
+                price: safePrice(v.price),
+                refillable: v.refillable === true || v.refillable === "true" || v.refillable === 1 || v.refillable === "1"
+              })).filter(v => v.name && v.kr) : [];
+            }
+
             if (
               body.emoji !==
               undefined
@@ -1720,6 +1738,18 @@ const server =
             }
           }
 
+          let variants = body.variants;
+          if (typeof variants === "string") {
+            try { variants = JSON.parse(variants); } catch { variants = []; }
+          }
+          variants = Array.isArray(variants) ? variants.map((v, idx) => ({
+            id: String(v.id || `v${idx+1}`),
+            name: String(v.name || "").trim(),
+            kr: String(v.kr || "").trim(),
+            price: safePrice(v.price),
+            refillable: v.refillable === true || v.refillable === "true" || v.refillable === 1 || v.refillable === "1"
+          })).filter(v => v.name && v.kr) : [];
+
           const item = {
             id,
 
@@ -1728,6 +1758,8 @@ const server =
             kr,
 
             price,
+
+            variants,
 
             emoji,
 
@@ -1902,6 +1934,118 @@ const server =
         }
 
         // =================================================
+        // V6：删除菜品图片
+        // =================================================
+        if (req.method === "DELETE" && /^\/api\/menu\/[^/]+\/image$/.test(p)) {
+          if (!authed(req)) return json(res,401,{error:"unauthorized"});
+          const id = p.split("/")[3];
+          const menus = readJson(MENU_FILE, []);
+          const item = menus.find(x => String(x.id) === String(id));
+          if (!item) return json(res,404,{error:"菜单不存在"});
+          if (item.image) deleteUploadedImage(item.image);
+          item.image = "";
+          writeJson(MENU_FILE, menus);
+          return json(res,200,item);
+        }
+
+        // =================================================
+        // V6：免费续面资格（大份/可续面规格）
+        // =================================================
+        if (req.method === "GET" && p === "/api/refill-eligibility") {
+          const table = safeTable(requestUrl.searchParams.get("table"));
+          const orders = readJson(ORDERS_FILE, []);
+          const candidates = orders.filter(o =>
+            isTodayKorea(o) && o.type !== "TAKEOUT" && Number(o.table) === table && !["CANCELLED","PAID"].includes(o.status)
+          ).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+          let source = null, sourceItem = null;
+          for (const o of candidates) {
+            const found = (Array.isArray(o.items)?o.items:[]).find(x => x.refillable);
+            if (found) { source=o; sourceItem=found; break; }
+          }
+          return json(res, 200, {
+            eligible: !!source,
+            sourceOrderId: source ? source.id : "",
+            itemName: sourceItem ? `${sourceItem.name}${sourceItem.variantName ? `（${sourceItem.variantName}）` : ""}` : ""
+          });
+        }
+
+        // =================================================
+        // V6：顾客提交免费续面追加单
+        // =================================================
+        if (req.method === "POST" && p === "/api/refill") {
+          const body = await parseBody(req);
+          const table = safeTable(body.table);
+          const qty = Math.min(5, safeQty(body.qty || 1));
+          const orders = readJson(ORDERS_FILE, []);
+          const candidates = orders.filter(o =>
+            isTodayKorea(o) && o.type !== "TAKEOUT" && Number(o.table) === table && !["CANCELLED","PAID"].includes(o.status)
+          ).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+          let source = null, sourceItem = null;
+          for (const o of candidates) {
+            const found = (Array.isArray(o.items)?o.items:[]).find(x => x.refillable);
+            if (found) { source=o; sourceItem=found; break; }
+          }
+          if (!source || !sourceItem) return json(res, 400, {error:"本桌暂时没有可免费续面的订单"});
+          const order = {
+            id: createOrderId(), table, type:"DINE_IN", status:"NEW",
+            isRefill:true, parentOrderId:source.id,
+            items:[{ id:sourceItem.id, name:`${sourceItem.name}续面`, kr:"면 추가", variantName:sourceItem.variantName || "", variantKr:sourceItem.variantKr || "", qty, price:0, subtotal:0, refillable:false, kind:"REFILL" }],
+            total:0, note:String(body.note||"").slice(0,100),
+            printState:"PENDING", printCount:0, createdAt:new Date().toISOString()
+          };
+          orders.push(order); writeJson(ORDERS_FILE, orders);
+          return json(res, 201, orderDetail(order));
+        }
+
+        // =================================================
+        // V6：后台手动补打
+        // =================================================
+        if (req.method === "POST" && /^\/api\/orders\/[^/]+\/reprint$/.test(p)) {
+          if (!authed(req)) return json(res,401,{error:"unauthorized"});
+          const id=p.split("/")[3];
+          const orders=readJson(ORDERS_FILE,[]); const order=orders.find(o=>String(o.id)===String(id));
+          if(!order) return json(res,404,{error:"订单不存在"});
+          order.printState="PENDING"; order.printForce=true; order.printError=""; order.printClaimedAt=""; order.reprintRequestedAt=new Date().toISOString();
+          writeJson(ORDERS_FILE,orders); return json(res,200,orderDetail(order));
+        }
+
+        // =================================================
+        // V6：本地打印桥队列（PRINT_KEY）
+        // =================================================
+        if (req.method === "GET" && p === "/api/print/jobs") {
+          const key = requestUrl.searchParams.get("key") || req.headers["x-print-key"] || "";
+          const expected = process.env.PRINT_KEY || "sijisancan-print";
+          if (String(key) !== String(expected)) return json(res,401,{error:"print unauthorized"});
+          const orders=readJson(ORDERS_FILE,[]); const now=Date.now(); const jobs=[];
+          for(const o of orders){
+            // 旧版本历史订单没有 printState：升级后绝不自动补打，避免厨房一次打印旧单。
+            if(!o.printState && !o.printForce) continue;
+            if((o.status === "CANCELLED" || o.status === "PAID") && !o.printForce) continue;
+            if((o.printState||"PENDING") === "PRINTED" && !o.printForce) continue;
+            const claimed = o.printClaimedAt ? new Date(o.printClaimedAt).getTime() : 0;
+            if((o.printState||"") === "CLAIMED" && claimed && now-claimed < 45000) continue;
+            o.printState="CLAIMED"; o.printClaimedAt=new Date().toISOString(); jobs.push(orderDetail(o));
+            if(jobs.length>=5) break;
+          }
+          if(jobs.length) writeJson(ORDERS_FILE,orders);
+          return json(res,200,jobs);
+        }
+
+        if (req.method === "POST" && /^\/api\/print\/[^/]+\/ack$/.test(p)) {
+          const key = requestUrl.searchParams.get("key") || req.headers["x-print-key"] || "";
+          const expected = process.env.PRINT_KEY || "sijisancan-print";
+          if (String(key) !== String(expected)) return json(res,401,{error:"print unauthorized"});
+          const id=p.split("/")[3]; const body=await parseBody(req); const orders=readJson(ORDERS_FILE,[]);
+          const order=orders.find(o=>String(o.id)===String(id)); if(!order) return json(res,404,{error:"订单不存在"});
+          if(body.success===true || body.success==="true"){
+            order.printState="PRINTED"; order.printedAt=new Date().toISOString(); order.printCount=Number(order.printCount||0)+1; order.printError=""; order.printForce=false;
+          } else {
+            order.printState="ERROR"; order.printError=String(body.error||"打印失败").slice(0,200);
+          }
+          order.printClaimedAt=""; writeJson(ORDERS_FILE,orders); return json(res,200,orderDetail(order));
+        }
+
+        // =================================================
         // 二维码
         // =================================================
 
@@ -1958,6 +2102,29 @@ const server =
         }
 
         // =================================================
+        // V6：桌号实时状态
+        // =================================================
+        if (req.method === "GET" && p === "/api/tables") {
+          if (!authed(req)) return json(res, 401, { error:"unauthorized" });
+          const orders = readJson(ORDERS_FILE, []);
+          const todayOrders = orders.filter(isTodayKorea);
+          const tables = [];
+          for (let table=1; table<=20; table++) {
+            const list = todayOrders.filter(o => Number(o.table)===table && o.type!=="TAKEOUT");
+            const active = list.filter(o => ["NEW","COOKING","DONE"].includes(o.status));
+            const latest = list.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0] || null;
+            tables.push({
+              table,
+              status: active.some(o=>o.status==="NEW") ? "NEW" : active.some(o=>o.status==="COOKING") ? "COOKING" : active.some(o=>o.status==="DONE") ? "DONE" : "FREE",
+              activeOrders: active.length,
+              activeTotal: active.reduce((sum,o)=>sum+safePrice(o.total),0),
+              latest: latest ? orderDetail(latest) : null
+            });
+          }
+          return json(res,200,tables);
+        }
+
+        // =================================================
         // 后台统计
         // =================================================
 
@@ -1982,19 +2149,7 @@ const server =
               []
             );
 
-          const today =
-            todayString();
-
-          const todayOrders =
-            orders.filter(
-              (order) =>
-                String(
-                  order.createdAt ||
-                    ""
-                ).startsWith(
-                  today
-                )
-            );
+          const todayOrders = orders.filter(isTodayKorea);
 
           const newOrders =
             todayOrders.filter(
@@ -2017,15 +2172,16 @@ const server =
                 "DONE"
             ).length;
 
+          const paidOrders = todayOrders.filter(order => order.status === "PAID").length;
+          const cancelledOrders = todayOrders.filter(order => order.status === "CANCELLED").length;
+
           const todaySales =
-            todayOrders.reduce(
-              (sum, order) =>
-                sum +
-                safePrice(
-                  order.total
-                ),
-              0
-            );
+            todayOrders
+              .filter(order => order.status === "PAID")
+              .reduce(
+                (sum, order) => sum + safePrice(order.total),
+                0
+              );
 
           const doneSales =
             todayOrders
@@ -2062,6 +2218,10 @@ const server =
               cookingOrders,
 
               doneOrders,
+
+              paidOrders,
+
+              cancelledOrders,
 
               pendingOrders:
                 newOrders +
@@ -2265,7 +2425,7 @@ server.listen(
   PORT,
   () => {
     console.log(
-      "四季三餐 v5: http://localhost:" +
+      "四季三餐 V6 营业版: http://localhost:" +
       PORT
     );
 
