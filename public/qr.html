@@ -1,267 +1,189 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>四季三餐｜30桌二维码</title>
 
 <style>
-* {
-  box-sizing: border-box;
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Microsoft YaHei",Arial,sans-serif;
+  background:#f3f3f3;
+  color:#222;
+}
+.toolbar{
+  max-width:210mm;
+  margin:18px auto 10px;
+  padding:0 10mm;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:15px;
+}
+.toolbar h1{margin:0;font-size:24px}
+.toolbar .sub{font-size:13px;color:#777;margin-top:4px}
+.printBtn{
+  border:0;
+  background:#143e31;
+  color:#fff;
+  padding:11px 18px;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.pages{padding:5mm 0 15mm}
+.page{
+  width:210mm;
+  height:297mm;
+  padding:11mm 12mm;
+  margin:0 auto 10mm;
+  background:#fff;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:repeat(4,1fr);
+  gap:5mm 6mm;
+  overflow:hidden;
+  break-after:page;
+  page-break-after:always;
+}
+.page:last-child{
+  break-after:auto;
+  page-break-after:auto;
+}
+.qr-card{
+  border:1.2px solid #d6d0c5;
+  border-radius:10px;
+  padding:5mm 4mm 4mm;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  min-height:0;
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+.brand{
+  font-size:19px;
+  line-height:1.15;
+  font-weight:900;
+  color:#143e31;
+  margin-bottom:1mm;
+}
+.brandKr{
+  font-size:13px;
+  font-weight:800;
+  color:#143e31;
+  margin-bottom:2mm;
+}
+.tableNo{
+  font-size:21px;
+  font-weight:900;
+  margin:0 0 2mm;
+}
+.qr{
+  width:42mm;
+  height:42mm;
+  display:block;
+  object-fit:contain;
+}
+.hint{
+  margin-top:2mm;
+  font-size:10.5px;
+  color:#666;
+  line-height:1.35;
+}
+.url{
+  font-size:7.5px;
+  color:#999;
+  margin-top:1mm;
+  max-width:80mm;
+  overflow-wrap:anywhere;
 }
 
-body {
-  margin: 0;
-  background: #eeeeee;
-  color: #222;
-  font-family:
-    Arial,
-    "Microsoft YaHei",
-    "PingFang SC",
-    sans-serif;
-}
-
-/* 顶部操作栏 */
-.toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  height: 64px;
-  background: #ffffff;
-  border-bottom: 1px solid #ddd;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 15px;
-}
-
-.toolbar h1 {
-  margin: 0;
-  font-size: 20px;
-  flex: 1;
-}
-
-.toolbar span {
-  color: #666;
-  font-size: 14px;
-}
-
-.print-btn {
-  border: 0;
-  background: #111111;
-  color: white;
-  padding: 10px 22px;
-  border-radius: 8px;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.print-btn:hover {
-  background: #333333;
-}
-
-/* 页面容器 */
-.pages {
-  padding: 20px;
-}
-
-/* A4 */
-.page {
-  width: 210mm;
-  height: 297mm;
-  background: white;
-  margin: 0 auto 20px auto;
-  padding: 8mm;
-
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(4, 1fr);
-
-  gap: 5mm;
-
-  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
-
-  page-break-after: always;
-}
-
-/* 单个桌牌 */
-.table-card {
-  border: 1.5px solid #222;
-  border-radius: 8px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  text-align: center;
-
-  padding: 5mm;
-}
-
-/* 店名 */
-.restaurant {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 2mm;
-}
-
-/* 桌号 */
-.table-number {
-  font-size: 25px;
-  font-weight: 800;
-  margin-bottom: 2mm;
-}
-
-/* 二维码 */
-.qr {
-  width: 48mm;
-  height: 48mm;
-  display: block;
-}
-
-/* 提示 */
-.tip {
-  margin-top: 2mm;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* 屏幕预览时显示网址 */
-.url {
-  margin-top: 1.5mm;
-  font-size: 7px;
-  color: #888;
-  word-break: break-all;
-}
-
-/* 打印 */
-@media print {
-
-  @page {
-    size: A4 portrait;
-    margin: 0;
+@media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{
+    margin:0!important;
+    padding:0!important;
+    background:#fff!important;
   }
-
-  body {
-    background: #ffffff;
+  .toolbar{display:none!important}
+  .pages{padding:0!important;margin:0!important}
+  .page{
+    width:210mm!important;
+    height:297mm!important;
+    margin:0!important;
+    padding:11mm 12mm!important;
+    box-shadow:none!important;
+    break-after:page!important;
+    page-break-after:always!important;
   }
-
-  .toolbar {
-    display: none;
+  .page:last-child{
+    break-after:auto!important;
+    page-break-after:auto!important;
   }
-
-  .pages {
-    padding: 0;
-  }
-
-  .page {
-    width: 210mm;
-    height: 297mm;
-    margin: 0;
-    padding: 8mm;
-
-    box-shadow: none;
-
-    page-break-after: always;
-    break-after: page;
-  }
-
-  .table-card {
-    break-inside: avoid;
-  }
-
-  .url {
-    color: #888;
+}
+@media screen and (max-width:900px){
+  .toolbar{padding:0 16px}
+  .page{
+    width:min(96vw,210mm);
+    height:auto;
+    min-height:1200px;
   }
 }
 </style>
-
 </head>
 
 <body>
-
 <div class="toolbar">
-  <h1>四季三餐｜30桌二维码</h1>
-
-<span>A4 每页8张 · 共30张</span>
-
-  <button class="print-btn" onclick="window.print()">
-    打印二维码
-  </button>
+  <div>
+    <h1>四季三餐｜30桌二维码</h1>
+    <div class="sub">A4 每页8张 · 第1页1–8桌 / 第2页9–16桌 / 第3页17–24桌 / 第4页25–30桌</div>
+  </div>
+  <button class="printBtn" onclick="window.print()">打印二维码</button>
 </div>
 
-<div class="pages" id="pages"></div>
+<div id="pages" class="pages"></div>
 
 <script>
+const TOTAL_TABLES = 30;
+const PER_PAGE = 8;
+const pages = document.getElementById('pages');
 
-const pages = document.getElementById("pages");
-
-/*
- * 每页8张
- * 1-8
- * 9-16
- * 17-24
- * 25-30
- */
-
-for (let start = 1; start <= 30; start += 8) {
-
-  const page = document.createElement("div");
-  page.className = "page";
-
-  const end = Math.min(start + 7, 30);
-
-  for (let table = start; table <= end; table++) {
-
-    const card = document.createElement("div");
-    card.className = "table-card";
-
-    /* 店名 */
-    const restaurant = document.createElement("div");
-    restaurant.className = "restaurant";
-    restaurant.textContent = "四季三餐";
-
-    /* 桌号 */
-    const tableNumber = document.createElement("div");
-    tableNumber.className = "table-number";
-    tableNumber.textContent = table + "号桌";
-
-    /* 二维码 */
-    const qr = document.createElement("img");
-    qr.className = "qr";
-    qr.alt = table + "号桌二维码";
-
-    /*
-     * 使用你现在服务器上的二维码接口
-     */
-    qr.src = "/api/qr?table=" + table;
-
-    /* 扫码提示 */
-    const tip = document.createElement("div");
-    tip.className = "tip";
-    tip.textContent = "请扫码点餐";
-
-    /* 网址，仅用于预览检查 */
-    const url = document.createElement("div");
-    url.className = "url";
-    url.textContent =
-      window.location.origin + "/?table=" + table;
-
-    card.appendChild(restaurant);
-    card.appendChild(tableNumber);
-    card.appendChild(qr);
-    card.appendChild(tip);
-    card.appendChild(url);
-
-    page.appendChild(card);
-  }
-
-  pages.appendChild(page);
+function customerUrl(table){
+  return location.origin + '/?table=' + table;
 }
 
-</script>
+function qrImageUrl(text){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=8&data='
+    + encodeURIComponent(text);
+}
 
+for(let start=1; start<=TOTAL_TABLES; start+=PER_PAGE){
+  const page = document.createElement('section');
+  page.className = 'page';
+
+  const end = Math.min(start + PER_PAGE - 1, TOTAL_TABLES);
+  for(let table=start; table<=end; table++){
+    const url = customerUrl(table);
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    card.innerHTML = `
+      <div class="brand">四季三餐</div>
+      <div class="brandKr">사계삼찬</div>
+      <div class="tableNo">${table}号桌 · ${table}번 테이블</div>
+      <img class="qr" src="${qrImageUrl(url)}" alt="${table}号桌二维码">
+      <div class="hint">扫码点餐 · QR 주문</div>
+      <div class="url">${url}</div>
+    `;
+    page.appendChild(card);
+  }
+  pages.appendChild(page);
+}
+</script>
 </body>
 </html>
