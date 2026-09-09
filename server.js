@@ -994,6 +994,37 @@ const server =
         }
 
         // =================================================
+        // V7.2.2：顾客仅查看本设备已保存的订单
+        // 通过随机订单ID + 当前桌号双重过滤，避免暴露其他桌订单
+        // =================================================
+
+        if (
+          req.method === "GET" &&
+          p === "/api/customer/orders"
+        ) {
+          const rawIds = String(requestUrl.searchParams.get("ids") || "");
+          const table = safeTable(requestUrl.searchParams.get("table"));
+          const ids = rawIds
+            .split(",")
+            .map(x => x.trim())
+            .filter(Boolean)
+            .slice(0, 50);
+
+          if (!ids.length) {
+            return json(res, 200, []);
+          }
+
+          const idSet = new Set(ids);
+          const orders = readJson(ORDERS_FILE, []);
+          const result = orders
+            .filter(o => idSet.has(String(o.id)) && Number(o.table) === Number(table))
+            .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .map(orderDetail);
+
+          return json(res, 200, result);
+        }
+
+        // =================================================
         // 老板：全部订单
         // =================================================
 
