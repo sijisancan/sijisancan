@@ -769,6 +769,15 @@ function orderDetail(order) {
           variantKr: item.variantKr || "",
           refillable: !!item.refillable,
           kind: item.kind || "ITEM",
+          options: Array.isArray(item.options) ? item.options.map(o => ({
+            groupId: String(o.groupId || ""),
+            groupName: String(o.groupName || ""),
+            groupKr: String(o.groupKr || ""),
+            optionId: String(o.optionId || ""),
+            name: String(o.name || ""),
+            kr: String(o.kr || ""),
+            price: safePrice(o.price)
+          })) : [],
 
           qty,
 
@@ -1175,7 +1184,36 @@ const server =
                     variant = variants.find(v => String(v.id) === String(item.variantId || ""));
                     if (!variant) return null;
                   }
-                  const price = safePrice(variant ? variant.price : menuItem.price);
+                  const basePrice = safePrice(variant ? variant.price : menuItem.price);
+                  const optionGroups = Array.isArray(menuItem.optionGroups) ? menuItem.optionGroups : [];
+                  const rawSelections = Array.isArray(item.optionSelections) ? item.optionSelections : [];
+                  const selections = new Map(rawSelections.map(s => [String(s.groupId || ""), Array.isArray(s.optionIds) ? s.optionIds.map(String) : []]));
+                  const chosenOptions = [];
+                  let optionTotal = 0;
+
+                  for (const group of optionGroups) {
+                    const ids = selections.get(String(group.id || "")) || [];
+                    if (group.required && !ids.length) return null;
+                    if (group.type !== "multi" && ids.length > 1) return null;
+
+                    for (const oid of ids) {
+                      const opt = (Array.isArray(group.options) ? group.options : []).find(o => String(o.id) === String(oid));
+                      if (!opt) return null;
+                      const addPrice = safePrice(opt.price);
+                      optionTotal += addPrice;
+                      chosenOptions.push({
+                        groupId: String(group.id || ""),
+                        groupName: String(group.name || ""),
+                        groupKr: String(group.kr || ""),
+                        optionId: String(opt.id || ""),
+                        name: String(opt.name || ""),
+                        kr: String(opt.kr || ""),
+                        price: addPrice
+                      });
+                    }
+                  }
+
+                  const price = basePrice + optionTotal;
 
                   return {
                     id: menuItem.id,
@@ -1186,6 +1224,7 @@ const server =
                     variantKr: variant ? String(variant.kr || "") : "",
                     refillable: !!(variant && variant.refillable),
                     kind: "ITEM",
+                    options: chosenOptions,
                     qty,
                     price,
                     subtotal: price * qty
@@ -1616,6 +1655,26 @@ const server =
               })).filter(v => v.name && v.kr) : [];
             }
 
+            if (body.optionGroups !== undefined) {
+              let raw = body.optionGroups;
+              if (typeof raw === "string") {
+                try { raw = JSON.parse(raw); } catch { raw = []; }
+              }
+              old.optionGroups = Array.isArray(raw) ? raw.map((g, gi) => ({
+                id: String(g.id || `g${gi+1}`),
+                name: String(g.name || "").trim(),
+                kr: String(g.kr || "").trim(),
+                type: g.type === "multi" ? "multi" : "single",
+                required: g.required === true || g.required === "true" || g.required === 1 || g.required === "1",
+                options: Array.isArray(g.options) ? g.options.map((o, oi) => ({
+                  id: String(o.id || `o${oi+1}`),
+                  name: String(o.name || "").trim(),
+                  kr: String(o.kr || "").trim(),
+                  price: safePrice(o.price)
+                })).filter(o => o.name && o.kr) : []
+              })).filter(g => g.name && g.kr && g.options.length) : [];
+            }
+
             if (
               body.emoji !==
               undefined
@@ -1804,6 +1863,24 @@ const server =
             refillable: v.refillable === true || v.refillable === "true" || v.refillable === 1 || v.refillable === "1"
           })).filter(v => v.name && v.kr) : [];
 
+          let optionGroups = body.optionGroups;
+          if (typeof optionGroups === "string") {
+            try { optionGroups = JSON.parse(optionGroups); } catch { optionGroups = []; }
+          }
+          optionGroups = Array.isArray(optionGroups) ? optionGroups.map((g, gi) => ({
+            id: String(g.id || `g${gi+1}`),
+            name: String(g.name || "").trim(),
+            kr: String(g.kr || "").trim(),
+            type: g.type === "multi" ? "multi" : "single",
+            required: g.required === true || g.required === "true" || g.required === 1 || g.required === "1",
+            options: Array.isArray(g.options) ? g.options.map((o, oi) => ({
+              id: String(o.id || `o${oi+1}`),
+              name: String(o.name || "").trim(),
+              kr: String(o.kr || "").trim(),
+              price: safePrice(o.price)
+            })).filter(o => o.name && o.kr) : []
+          })).filter(g => g.name && g.kr && g.options.length) : [];
+
           const item = {
             id,
 
@@ -1814,6 +1891,8 @@ const server =
             price,
 
             variants,
+
+            optionGroups,
 
             emoji,
 
