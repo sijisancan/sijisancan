@@ -40,6 +40,11 @@ const catKr={'主食':'주식','面类':'면류','饺子':'만두','凉菜':'요
 function categoryOf(x){let c=String(x.category||'').trim(),n=(x.name||'')+' '+(x.kr||'');if(/饮料|饮品|可乐|雪碧|汽水|콜라|사이다/.test(c+n))return'饮料';if(/酒|啤|烧酒|맥주|소주/.test(c+n))return'酒水';if(/凉菜|冷菜|小菜|반찬|냉채/.test(c+n))return'凉菜';if(/饺|锅贴|馄饨|水饺|만두|완탕/.test(c+n))return'饺子';if(/面|면|자장/.test(c+n))return'面类';if(c&&prefCats.includes(c))return c;if(c&&/主食/.test(c))return'主食';return c||'主食'}
 function stableSelections(s){return (s||[]).map(g=>({groupId:String(g.groupId||''),optionIds:[...(g.optionIds||[])].map(String).sort()})).sort((a,b)=>a.groupId.localeCompare(b.groupId))}
 function keyOf(id,vid,selections=[]){return id+'::'+(vid||'')+'::'+JSON.stringify(stableSelections(selections))}
+async function load(){let r=await fetch('/api/menu',{cache:'no-store'});menus=await r.json();renderAll()}setInterval(load,5000);
+function catsPresent(){let s=new Set(menus.map(categoryOf));return prefCats.filter(c=>s.has(c))}
+function renderAll(){let cs=catsPresent();cats.innerHTML=cs.map((c,i)=>`<button class="cat ${(!activeCat&&i===0)||activeCat===c?'on':''}" onclick="jumpCat('${esc(c)}')"><span class="k">${esc(catKr[c]||c)}</span><span class="c">${esc(c)}</span></button>`).join('');menuSections.innerHTML=cs.map(c=>`<section id="cat-${encodeURIComponent(c)}" class="section"><div class="sectionTitle"><span class="k">${esc(catKr[c]||c)}</span><span class="c">${esc(c)}</span></div><div class="menu">${menus.filter(x=>categoryOf(x)===c).map(card).join('')}</div></section>`).join('')||'<p>메뉴가 없습니다 / 暂无菜品</p>'}
+function jumpCat(c){activeCat=c;renderAll();let el=document.getElementById('cat-'+encodeURIComponent(c));if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}
+function card(x){let sold=x.on===false;let price=Array.isArray(x.variants)&&x.variants.length?'₩'+won(Math.min(...x.variants.map(v=>Number(v.price||0))))+'~':'₩'+won(x.price);return `<div class="dish ${sold?'soldout':''}">${sold?'<span class="soldbadge">품절 / 售罄</span>':''}<div class="photoWrap">${x.image?`<img class="photo" src="${esc(x.image)}" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=emoji>🍽️</div>'">`:`<div class="emoji">${esc(x.emoji||'🍽️')}</div>`}</div><div class="info"><div class="kr">${esc(x.kr||x.name)}</div><div class="cn">${esc(x.name)}</div><div class="cardBottom"><div class="price">${price}</div><button class="btn addBtn" ${sold?'disabled':''} onclick="choose('${esc(x.id)}')">${sold?'품절':(x.variants?.length?'선택':'＋ 담기')}<span class="cnSmall">${sold?'售罄':(x.variants?.length?'选规格':'加入')}</span></button></div></div></div>`}
 let customizing=null;
 function choose(id){
   let x=menus.find(m=>String(m.id)===String(id));if(!x||x.on===false)return;
@@ -56,7 +61,7 @@ function choose(id){
   }
   (x.optionGroups||[]).forEach(g=>{
     let type=g.type==='multi'?'checkbox':'radio',name='og_'+String(g.id).replace(/[^a-zA-Z0-9_-]/g,'_');
-    html+=`<div class="customGroup" data-group="${esc(g.id)}" data-type="${g.type==='multi'?'multi':'single'}" data-required="${g.required?'1':'0'}"><div class="customTitle">${esc(g.kr||g.name)} / ${esc(g.name)} ${g.required?'<span class="req">필수 / 必选</span>':''}</div>`;
+    html+=`<div class="customGroup" data-group="${esc(g.id)}" data-required="${g.required?'1':'0'}"><div class="customTitle">${esc(g.kr||g.name)} / ${esc(g.name)} ${g.required?'<span class="req">필수 / 必选</span>':''}</div>`;
     html+=(g.options||[]).map(o=>`<div class="customOpt"><label><input type="${type}" name="${esc(name)}" value="${esc(o.id)}"><span><b>${esc(o.kr||o.name)}</b><br><span class="muted">${esc(o.name)}</span></span></label><b>${Number(o.price||0)?'+₩'+won(o.price):'₩0'}</b></div>`).join('');
     html+='</div>';
   });
@@ -66,8 +71,7 @@ function confirmCustomize(){
   if(!customizing)return;
   let x=menus.find(m=>String(m.id)===String(customizing.id));if(!x)return;
   let vr=vmList.querySelector('input[name="custVariant"]:checked');
-  let vid=vr?vr.value:'';
-  let selections=[];
+  let vid=vr?vr.value:'',selections=[];
   for(const el of vmList.querySelectorAll('.customGroup[data-group]')){
     let ids=[...el.querySelectorAll('input:checked')].map(i=>i.value);
     if(el.dataset.required==='1'&&!ids.length){alert('필수 옵션을 선택해 주세요 / 请选择必选项');return}
@@ -77,13 +81,13 @@ function confirmCustomize(){
 }
 function add(id,vid,selections=[]){
   let x=menus.find(m=>String(m.id)===String(id));if(!x||x.on===false)return;
-  let v=(x.variants||[]).find(a=>String(a.id)===String(vid));
-  let chosen=[],extra=0;
+  let v=(x.variants||[]).find(a=>String(a.id)===String(vid)),chosen=[],extra=0;
   for(const sel of selections){
     let g=(x.optionGroups||[]).find(a=>String(a.id)===String(sel.groupId));if(!g)continue;
     for(const oid of (sel.optionIds||[])){
       let o=(g.options||[]).find(a=>String(a.id)===String(oid));if(!o)continue;
-      extra+=Number(o.price||0);chosen.push({groupId:g.id,groupName:g.name,groupKr:g.kr||'',optionId:o.id,name:o.name,kr:o.kr||'',price:Number(o.price||0)});
+      extra+=Number(o.price||0);
+      chosen.push({groupId:g.id,groupName:g.name,groupKr:g.kr||'',optionId:o.id,name:o.name,kr:o.kr||'',price:Number(o.price||0)});
     }
   }
   let base=Number(v?v.price:x.price||0),price=base+extra,k=keyOf(id,vid,selections),old=cartMap.get(k);
