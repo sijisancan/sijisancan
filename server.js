@@ -1049,10 +1049,24 @@ const server =
               []
             );
 
+          // V7.2.4：历史订单按韩国日期筛选。
+          // history.html 若传 ?date=YYYY-MM-DD，只返回该日期订单；
+          // 未传 date 时保持原行为，返回全部订单供营业后台使用。
+          const date = String(requestUrl.searchParams.get("date") || "").trim();
+          let result = orders;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            result = orders.filter(order => {
+              if (!order || !order.createdAt) return false;
+              const d = new Date(order.createdAt);
+              if (Number.isNaN(d.getTime())) return false;
+              return koreaDateString(d) === date;
+            });
+          }
+
           return json(
             res,
             200,
-            orders.map(
+            result.map(
               orderDetail
             )
           );
