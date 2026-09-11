@@ -8,7 +8,13 @@ const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, "public");
 const BUNDLED_UPLOADS = path.join(PUBLIC, "uploads");
-const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : ROOT;
+// 数据目录：优先使用手动设置的 DATA_DIR。
+// 如果 Render 已挂载 /var/data Persistent Disk，则自动使用 /var/data。
+// 本地开发或没有磁盘时才回退到项目根目录。
+const RENDER_DISK_DIR = "/var/data";
+const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : (fs.existsSync(RENDER_DISK_DIR) ? RENDER_DISK_DIR : ROOT);
 const UPLOADS = path.join(DATA_DIR, "uploads");
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "123456";
@@ -2155,11 +2161,13 @@ const server =
         if (req.method === "GET" && p === "/api/storage-status") {
           if (!authed(req)) return json(res, 401, { error:"unauthorized" });
           const configured = !!process.env.DATA_DIR;
+          const autoDetectedDisk = path.resolve(DATA_DIR) === path.resolve(RENDER_DISK_DIR);
           const outsideRoot = path.resolve(DATA_DIR) !== path.resolve(ROOT);
           return json(res, 200, {
-            persistent: configured && outsideRoot,
+            persistent: outsideRoot,
             dataDir: DATA_DIR,
-            configured
+            configured,
+            autoDetectedDisk
           });
         }
 
