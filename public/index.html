@@ -70,7 +70,17 @@ async function openMyOrders(){
     const text=await r.text();
     let a;try{a=JSON.parse(text)}catch{throw new Error('invalid_json')}
     if(!r.ok||!Array.isArray(a))throw new Error((a&&a.error)||'load_failed');
-    myOrders.innerHTML=a.map(o=>`<div class="ordercard"><div><b>${o.table}번 / ${o.table}号桌</b>　<span class="status s${esc(o.status)}">${statusText[o.status]||o.status}</span></div><div class="muted">${new Date(o.createdAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})} · ${esc(o.id)}</div>${(o.items||[]).map(i=>`<div class="line"><span>${esc(i.kr||i.name)}<br><span class="muted">${esc(i.name)}${i.variantName?'（'+esc(i.variantName)+'）':''} × ${i.qty}</span></span><b>₩${won(i.subtotal)}</b></div>`).join('')}<div class="line"><b>합계 / 合计</b><b>₩${won(o.total)}</b></div>${o.note?`<div class="muted">요청사항 / 备注：${esc(o.note)}</div>`:''}</div>`).join('')||'<p class="muted">주문이 없습니다. / 暂时没有订单。</p>';
+
+    // V7.2.6 顾客隐私：
+    // 只显示当前还在进行中的订单，已结账/已取消视为上一轮顾客订单，不再展示。
+    const active=a.filter(o=>['NEW','COOKING','DONE'].includes(o.status));
+
+    // 同时清理本机缓存里的已结账/已取消订单ID，防止下一位顾客再次看到。
+    const activeIds=new Set(active.map(o=>String(o.id)));
+    const kept=ids.filter(id=>activeIds.has(String(id)));
+    localStorage.setItem(orderKey(),JSON.stringify(kept.slice(-50)));
+
+    myOrders.innerHTML=active.map(o=>`<div class="ordercard"><div><b>${o.table}번 / ${o.table}号桌</b>　<span class="status s${esc(o.status)}">${statusText[o.status]||o.status}</span></div><div class="muted">${new Date(o.createdAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})} · ${esc(o.id)}</div>${(o.items||[]).map(i=>`<div class="line"><span>${esc(i.kr||i.name)}<br><span class="muted">${esc(i.name)}${i.variantName?'（'+esc(i.variantName)+'）':''} × ${i.qty}</span></span><b>₩${won(i.subtotal)}</b></div>`).join('')}<div class="line"><b>합계 / 合计</b><b>₩${won(o.total)}</b></div>${o.note?`<div class="muted">요청사항 / 备注：${esc(o.note)}</div>`:''}</div>`).join('')||'<p class="muted">현재 진행 중인 주문이 없습니다.<br>当前没有进行中的订单。</p>';
   }catch(e){
     console.error('order history load failed',e);
     myOrders.innerHTML='<p>주문 내역을 불러오지 못했습니다.<br>订单记录读取失败，请稍后重试。</p><button class="btn" onclick="openMyOrders()">다시 시도 / 重新加载</button>';
