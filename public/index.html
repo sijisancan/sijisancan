@@ -30,7 +30,7 @@
   <textarea id="note" class="note" style="display:none" aria-hidden="true"></textarea>
 </main>
 <div class="cartbar"><button class="cartBadge" onclick="openCart()"><span class="cartIcon">🛒<span id="cartCountBubble" class="countBubble">0</span></span><span class="cartBadgeText"><b>장바구니</b><span id="cartCountCn">已选 0 件</span></span></button><button class="cartSummary" onclick="openCart()"><div id="cartTotal" class="total">₩0</div><div class="cartHint">선택 메뉴 보기 / 查看已选菜品</div></button><button class="btn submitBtn" onclick="submitOrder()"><span class="k">주문하기</span><span class="c">提交订单</span></button></div>
-<div id="cartModal" class="modal"><div class="dialog"><h2>장바구니 / 购物车</h2><div class="muted" style="margin:-4px 0 10px">주문 전 수량 변경·삭제 가능 / 下单前可修改数量或删除菜品</div><div id="cartPopup"></div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:#eee;color:#7f2929;padding:7px 10px" onclick="clearCart()">장바구니 비우기 / 清空</button></div><label class="noteLabel">요청사항 / 备注</label><textarea id="notePopup" class="note" placeholder="예: 고수 빼주세요 / 例如：不要香菜"></textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1;background:#777" onclick="closeCart()">계속 주문 / 继续点餐</button><button class="btn" style="flex:1" onclick="submitOrder()">주문하기 / 下单</button></div></div></div><div id="variantModal" class="modal"><div class="dialog"><h2 id="vmTitle"></h2><div id="vmList"></div><button class="btn" onclick="variantModal.style.display='none'">취소 / 取消</button></div></div>
+<div id="cartModal" class="modal"><div class="dialog"><h2>장바구니 / 购物车</h2><div class="muted" style="margin:-4px 0 10px">주문 전 수량 변경·삭제 가능 / 下单前可修改数量或删除菜品</div><div id="cartPopup"></div><div style="text-align:right;margin-top:8px"><button class="btn" style="background:#eee;color:#7f2929;padding:7px 10px" onclick="clearCart()">장바구니 비우기 / 清空</button></div><label class="noteLabel">요청사항 / 备注</label><textarea id="notePopup" class="note" placeholder="예: 고수 빼주세요 / 例如：不要香菜"></textarea><div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1;background:#777" onclick="closeCart()">계속 주문 / 继续点餐</button><button class="btn" style="flex:1" onclick="submitOrder()">주문하기 / 下单</button></div></div></div><div id="variantModal" class="modal"><div class="dialog"><h2 id="vmTitle"></h2><div id="vmList"></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1;background:#777" onclick="variantModal.style.display='none'">취소 / 取消</button><button class="btn" style="flex:1" onclick="confirmCustomize()">담기 / 加入购物车</button></div></div></div>
 <div id="ordersModal" class="modal"><div class="dialog"><h2>내 주문 / 我的订单</h2><div id="myOrders"></div><button class="btn" onclick="ordersModal.style.display='none'">닫기 / 关闭</button></div></div>
 <script>
 const $=id=>document.getElementById(id),won=n=>Number(n||0).toLocaleString('ko-KR'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -38,23 +38,67 @@ const q=new URLSearchParams(location.search);let table=Math.min(20,Math.max(1,Nu
 const prefCats=['主食','面类','饺子','凉菜','饮料','酒水','其他'];
 const catKr={'主食':'주식','面类':'면류','饺子':'만두','凉菜':'요리','饮料':'음료','酒水':'주류','其他':'기타'};
 function categoryOf(x){let c=String(x.category||'').trim(),n=(x.name||'')+' '+(x.kr||'');if(/饮料|饮品|可乐|雪碧|汽水|콜라|사이다/.test(c+n))return'饮料';if(/酒|啤|烧酒|맥주|소주/.test(c+n))return'酒水';if(/凉菜|冷菜|小菜|반찬|냉채/.test(c+n))return'凉菜';if(/饺|锅贴|馄饨|水饺|만두|완탕/.test(c+n))return'饺子';if(/面|면|자장/.test(c+n))return'面类';if(c&&prefCats.includes(c))return c;if(c&&/主食/.test(c))return'主食';return c||'主食'}
-function keyOf(id,vid){return id+'::'+(vid||'')}
-async function load(){let r=await fetch('/api/menu',{cache:'no-store'});menus=await r.json();renderAll()}setInterval(load,5000);
-function catsPresent(){let s=new Set(menus.map(categoryOf));return prefCats.filter(c=>s.has(c))}
-function renderAll(){let cs=catsPresent();cats.innerHTML=cs.map((c,i)=>`<button class="cat ${(!activeCat&&i===0)||activeCat===c?'on':''}" onclick="jumpCat('${esc(c)}')"><span class="k">${esc(catKr[c]||c)}</span><span class="c">${esc(c)}</span></button>`).join('');menuSections.innerHTML=cs.map(c=>`<section id="cat-${encodeURIComponent(c)}" class="section"><div class="sectionTitle"><span class="k">${esc(catKr[c]||c)}</span><span class="c">${esc(c)}</span></div><div class="menu">${menus.filter(x=>categoryOf(x)===c).map(card).join('')}</div></section>`).join('')||'<p>메뉴가 없습니다 / 暂无菜品</p>'}
-function jumpCat(c){activeCat=c;renderAll();let el=document.getElementById('cat-'+encodeURIComponent(c));if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}
-function card(x){let sold=x.on===false;let price=Array.isArray(x.variants)&&x.variants.length?'₩'+won(Math.min(...x.variants.map(v=>Number(v.price||0))))+'~':'₩'+won(x.price);return `<div class="dish ${sold?'soldout':''}">${sold?'<span class="soldbadge">품절 / 售罄</span>':''}<div class="photoWrap">${x.image?`<img class="photo" src="${esc(x.image)}" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=emoji>🍽️</div>'">`:`<div class="emoji">${esc(x.emoji||'🍽️')}</div>`}</div><div class="info"><div class="kr">${esc(x.kr||x.name)}</div><div class="cn">${esc(x.name)}</div><div class="cardBottom"><div class="price">${price}</div><button class="btn addBtn" ${sold?'disabled':''} onclick="choose('${esc(x.id)}')">${sold?'품절':(x.variants?.length?'선택':'＋ 담기')}<span class="cnSmall">${sold?'售罄':(x.variants?.length?'选规格':'加入')}</span></button></div></div></div>`}
-function choose(id){let x=menus.find(m=>String(m.id)===String(id));if(!x||x.on===false)return;if(Array.isArray(x.variants)&&x.variants.length){vmTitle.textContent=(x.kr||x.name)+' / '+x.name;vmList.innerHTML=x.variants.map(v=>`<button class="variant" onclick="add('${esc(x.id)}','${esc(v.id)}')"><span><b>${esc(v.kr||v.name)} / ${esc(v.name)}</b></span><b>₩${won(v.price)}</b></button>`).join('');variantModal.style.display='flex'}else add(id,'')}
-function add(id,vid){let x=menus.find(m=>String(m.id)===String(id));if(!x||x.on===false)return;let v=(x.variants||[]).find(a=>String(a.id)===String(vid)),k=keyOf(id,vid),old=cartMap.get(k);cartMap.set(k,{id:x.id,variantId:vid,name:x.name,kr:x.kr||'',variantName:v?.name||'',variantKr:v?.kr||'',price:Number(v?v.price:x.price||0),qty:(old?.qty||0)+1});variantModal.style.display='none';renderCart()}
+function stableSelections(s){return (s||[]).map(g=>({groupId:String(g.groupId||''),optionIds:[...(g.optionIds||[])].map(String).sort()})).sort((a,b)=>a.groupId.localeCompare(b.groupId))}
+function keyOf(id,vid,selections=[]){return id+'::'+(vid||'')+'::'+JSON.stringify(stableSelections(selections))}
+let customizing=null;
+function choose(id){
+  let x=menus.find(m=>String(m.id)===String(id));if(!x||x.on===false)return;
+  let hasVariants=Array.isArray(x.variants)&&x.variants.length;
+  let hasOptions=Array.isArray(x.optionGroups)&&x.optionGroups.length;
+  if(!hasVariants&&!hasOptions)return add(id,'',[]);
+  customizing={id:String(x.id)};
+  vmTitle.textContent=(x.kr||x.name)+' / '+x.name;
+  let html='';
+  if(hasVariants){
+    html+=`<div class="customGroup"><div class="customTitle">사이즈 / 规格 <span class="req">필수 / 必选</span></div>`+
+      x.variants.map((v,i)=>`<div class="customOpt"><label><input type="radio" name="custVariant" value="${esc(v.id)}" ${i===0?'checked':''}><span><b>${esc(v.kr||v.name)}</b><br><span class="muted">${esc(v.name)}</span></span></label><b>₩${won(v.price)}</b></div>`).join('')+
+      `</div>`;
+  }
+  (x.optionGroups||[]).forEach(g=>{
+    let type=g.type==='multi'?'checkbox':'radio',name='og_'+String(g.id).replace(/[^a-zA-Z0-9_-]/g,'_');
+    html+=`<div class="customGroup" data-group="${esc(g.id)}" data-type="${g.type==='multi'?'multi':'single'}" data-required="${g.required?'1':'0'}"><div class="customTitle">${esc(g.kr||g.name)} / ${esc(g.name)} ${g.required?'<span class="req">필수 / 必选</span>':''}</div>`;
+    html+=(g.options||[]).map(o=>`<div class="customOpt"><label><input type="${type}" name="${esc(name)}" value="${esc(o.id)}"><span><b>${esc(o.kr||o.name)}</b><br><span class="muted">${esc(o.name)}</span></span></label><b>${Number(o.price||0)?'+₩'+won(o.price):'₩0'}</b></div>`).join('');
+    html+='</div>';
+  });
+  vmList.innerHTML=html;variantModal.style.display='flex';
+}
+function confirmCustomize(){
+  if(!customizing)return;
+  let x=menus.find(m=>String(m.id)===String(customizing.id));if(!x)return;
+  let vr=vmList.querySelector('input[name="custVariant"]:checked');
+  let vid=vr?vr.value:'';
+  let selections=[];
+  for(const el of vmList.querySelectorAll('.customGroup[data-group]')){
+    let ids=[...el.querySelectorAll('input:checked')].map(i=>i.value);
+    if(el.dataset.required==='1'&&!ids.length){alert('필수 옵션을 선택해 주세요 / 请选择必选项');return}
+    if(ids.length)selections.push({groupId:el.dataset.group,optionIds:ids});
+  }
+  add(x.id,vid,selections);variantModal.style.display='none';customizing=null;
+}
+function add(id,vid,selections=[]){
+  let x=menus.find(m=>String(m.id)===String(id));if(!x||x.on===false)return;
+  let v=(x.variants||[]).find(a=>String(a.id)===String(vid));
+  let chosen=[],extra=0;
+  for(const sel of selections){
+    let g=(x.optionGroups||[]).find(a=>String(a.id)===String(sel.groupId));if(!g)continue;
+    for(const oid of (sel.optionIds||[])){
+      let o=(g.options||[]).find(a=>String(a.id)===String(oid));if(!o)continue;
+      extra+=Number(o.price||0);chosen.push({groupId:g.id,groupName:g.name,groupKr:g.kr||'',optionId:o.id,name:o.name,kr:o.kr||'',price:Number(o.price||0)});
+    }
+  }
+  let base=Number(v?v.price:x.price||0),price=base+extra,k=keyOf(id,vid,selections),old=cartMap.get(k);
+  cartMap.set(k,{id:x.id,variantId:vid,optionSelections:stableSelections(selections),options:chosen,name:x.name,kr:x.kr||'',variantName:v?.name||'',variantKr:v?.kr||'',price,qty:(old?.qty||0)+1});
+  renderCart();
+}
 function qty(k,d){let x=cartMap.get(k);if(!x)return;x.qty+=d;if(x.qty<=0)cartMap.delete(k);renderCart()}
 function removeItem(k){cartMap.delete(k);renderCart()}
 function clearCart(){if(!cartMap.size)return;if(confirm('장바구니를 비울까요? / 确定清空购物车吗？')){cartMap.clear();renderCart()}}
-function cartHtml(){let a=[...cartMap.entries()];return a.map(([k,x])=>`<div class="line"><span><b>${esc(x.kr||x.name)}${x.variantKr?' ('+esc(x.variantKr)+')':''}</b><br><span class="muted">${esc(x.name)}${x.variantName?'（'+esc(x.variantName)+'）':''} · ₩${won(x.price)}</span></span><span class="qty"><button onclick="qty('${esc(k)}',-1)">−</button><b>${x.qty}</b><button onclick="qty('${esc(k)}',1)">＋</button><button class="del" onclick="removeItem('${esc(k)}')">삭제 / 删除</button></span></div>`).join('')||'<span class="muted">선택한 메뉴가 없습니다 / 还没有选择菜品</span>'}
+function cartHtml(){let a=[...cartMap.entries()];return a.map(([k,x])=>`<div class="line"><span><b>${esc(x.kr||x.name)}${x.variantKr?' ('+esc(x.variantKr)+')':''}</b><br><span class="muted">${esc(x.name)}${x.variantName?'（'+esc(x.variantName)+'）':''}${x.options?.length?'<br>'+x.options.map(o=>esc(o.groupName)+'：'+esc(o.name)+(o.price?' +₩'+won(o.price):'')).join(' / '):''} · ₩${won(x.price)}</span></span><span class="qty"><button onclick="qty('${esc(k)}',-1)">−</button><b>${x.qty}</b><button onclick="qty('${esc(k)}',1)">＋</button><button class="del" onclick="removeItem('${esc(k)}')">삭제 / 删除</button></span></div>`).join('')||'<span class="muted">선택한 메뉴가 없습니다 / 还没有选择菜品</span>'}
 function renderCart(){let a=[...cartMap.entries()],html=cartHtml();if(window.cartPopup)cartPopup.innerHTML=html;let count=a.reduce((s,[,x])=>s+x.qty,0),total=a.reduce((s,[,x])=>s+x.qty*x.price,0);cartCountBubble.textContent=count;cartCountCn.textContent='已选 '+count+' 件';cartTotal.textContent='₩'+won(total)}
 function openCart(){cartPopup.innerHTML=cartHtml();notePopup.value=note.value;cartModal.style.display='flex'}
 function closeCart(){note.value=notePopup.value;cartModal.style.display='none'}
 function orderKey(){return 'sijisancan_orders_table_'+table}function savedIds(){try{return JSON.parse(localStorage.getItem(orderKey())||'[]')}catch{return[]}}function saveOrderId(id){let a=savedIds().filter(Boolean);if(!a.includes(id))a.push(id);localStorage.setItem(orderKey(),JSON.stringify(a.slice(-50)))}
-async function submitOrder(){if(window.cartModal&&cartModal.style.display==='flex')note.value=notePopup.value;let items=[...cartMap.values()].map(x=>({id:x.id,variantId:x.variantId,qty:x.qty}));if(!items.length)return alert('메뉴를 선택해 주세요 / 请先选择菜品');let r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({table,type:'DINE_IN',items,note:note.value})}),d=await r.json();if(!r.ok)return alert(d.error||'주문 실패 / 下单失败');if(d.id)saveOrderId(d.id);cartMap.clear();note.value='';if(window.notePopup)notePopup.value='';if(window.cartModal)cartModal.style.display='none';renderCart();alert('주문이 접수되었습니다! / 下单成功！');openMyOrders()}
+async function submitOrder(){if(window.cartModal&&cartModal.style.display==='flex')note.value=notePopup.value;let items=[...cartMap.values()].map(x=>({id:x.id,variantId:x.variantId,optionSelections:x.optionSelections||[],qty:x.qty}));if(!items.length)return alert('메뉴를 선택해 주세요 / 请先选择菜品');let r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({table,type:'DINE_IN',items,note:note.value})}),d=await r.json();if(!r.ok)return alert(d.error||'주문 실패 / 下单失败');if(d.id)saveOrderId(d.id);cartMap.clear();note.value='';if(window.notePopup)notePopup.value='';if(window.cartModal)cartModal.style.display='none';renderCart();alert('주문이 접수되었습니다! / 下单成功！');openMyOrders()}
 const statusText={NEW:'주문완료 / 已下单',COOKING:'조리중 / 制作中',DONE:'완료 / 已完成',PAID:'결제완료 / 已结账',CANCELLED:'취소 / 已取消'};
 async function openMyOrders(){
   ordersModal.style.display='flex';
@@ -80,7 +124,7 @@ async function openMyOrders(){
     const kept=ids.filter(id=>activeIds.has(String(id)));
     localStorage.setItem(orderKey(),JSON.stringify(kept.slice(-50)));
 
-    myOrders.innerHTML=active.map(o=>`<div class="ordercard"><div><b>${o.table}번 / ${o.table}号桌</b>　<span class="status s${esc(o.status)}">${statusText[o.status]||o.status}</span></div><div class="muted">${new Date(o.createdAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})} · ${esc(o.id)}</div>${(o.items||[]).map(i=>`<div class="line"><span>${esc(i.kr||i.name)}<br><span class="muted">${esc(i.name)}${i.variantName?'（'+esc(i.variantName)+'）':''} × ${i.qty}</span></span><b>₩${won(i.subtotal)}</b></div>`).join('')}<div class="line"><b>합계 / 合计</b><b>₩${won(o.total)}</b></div>${o.note?`<div class="muted">요청사항 / 备注：${esc(o.note)}</div>`:''}</div>`).join('')||'<p class="muted">현재 진행 중인 주문이 없습니다.<br>当前没有进行中的订单。</p>';
+    myOrders.innerHTML=active.map(o=>`<div class="ordercard"><div><b>${o.table}번 / ${o.table}号桌</b>　<span class="status s${esc(o.status)}">${statusText[o.status]||o.status}</span></div><div class="muted">${new Date(o.createdAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})} · ${esc(o.id)}</div>${(o.items||[]).map(i=>`<div class="line"><span>${esc(i.kr||i.name)}<br><span class="muted">${esc(i.name)}${i.variantName?'（'+esc(i.variantName)+'）':''}${i.options?.length?'<br>'+i.options.map(o=>esc(o.groupName)+'：'+esc(o.name)).join(' / '):''} × ${i.qty}</span></span><b>₩${won(i.subtotal)}</b></div>`).join('')}<div class="line"><b>합계 / 合计</b><b>₩${won(o.total)}</b></div>${o.note?`<div class="muted">요청사항 / 备注：${esc(o.note)}</div>`:''}</div>`).join('')||'<p class="muted">현재 진행 중인 주문이 없습니다.<br>当前没有进行中的订单。</p>';
   }catch(e){
     console.error('order history load failed',e);
     myOrders.innerHTML='<p>주문 내역을 불러오지 못했습니다.<br>订单记录读取失败，请稍后重试。</p><button class="btn" onclick="openMyOrders()">다시 시도 / 重新加载</button>';
