@@ -2164,18 +2164,63 @@ const server =
           return json(res,200,jobs);
         }
 
-        if (req.method === "POST" && /^\/api\/print\/[^/]+\/ack$/.test(p)) {
+        // =================================================
+        // V7.5.2：厨房打印完成回执（兼容不同本地打印桥路径）
+        // 标准路径：POST /api/print/:id/ack
+        // 兼容旧桥：
+        //   POST /api/print/jobs/:id/ack
+        //   POST /api/print/:id/done
+        //   POST /api/print/jobs/:id/done
+        // 成功打印后必须在这里标记 PRINTED，避免同一订单被重复领取。
+        // =================================================
+        const printAckMatch = p.match(
+          /^\/api\/print\/(?:jobs\/)?([^/]+)\/(ack|done)$/
+        );
+        if (req.method === "POST" && printAckMatch) {
           const key = requestUrl.searchParams.get("key") || req.headers["x-print-key"] || "";
           const expected = process.env.PRINT_KEY || "sijisancan-print";
-          if (String(key) !== String(expected)) return json(res,401,{error:"print unauthorized"});
-          const id=p.split("/")[3]; const body=await parseBody(req); const orders=readJson(ORDERS_FILE,[]);
-          const order=orders.find(o=>String(o.id)===String(id)); if(!order) return json(res,404,{error:"订单不存在"});
-          if(body.success===true || body.success==="true"){
-            order.printState="PRINTED"; order.printedAt=new Date().toISOString(); order.printCount=Number(order.printCount||0)+1; order.printError=""; order.printForce=false;
-          } else {
-            order.printState="ERROR"; order.printError=String(body.error||"打印失败").slice(0,200);
+          if (String(key) !== String(expected)) {
+            return json(res, 401, { error: "print unauthorized" });
           }
-          order.printClaimedAt=""; writeJson(ORDERS_FILE,orders); return json(res,200,orderDetail(order));
+
+          const id = decodeURIComponent(printAckMatch[1]);
+          let body = {};
+          try {
+            body = await parseBody(req);
+          } catch (e) {
+            // 某些旧版厨房桥 done 请求没有 JSON body；done 默认视为成功。
+            body = {};
+          }
+
+          const orders = readJson(ORDERS_FILE, []);
+          const order = orders.find(o => String(o.id) === String(id));
+          if (!order) return json(res, 404, { error: "订单不存在" });
+
+          const action = printAckMatch[2];
+          const success =
+            action === "done" ||
+            body.success === true ||
+            body.success === "true" ||
+            body.ok === true ||
+            body.ok === "true";
+
+          if (success) {
+            // 幂等：重复回执不会重复增加打印次数。
+            if (order.printState !== "PRINTED" || order.printForce) {
+              order.printCount = Number(order.printCount || 0) + 1;
+            }
+            order.printState = "PRINTED";
+            order.printedAt = new Date().toISOString();
+            order.printError = "";
+            order.printForce = false;
+          } else {
+            order.printState = "ERROR";
+            order.printError = String(body.error || "打印失败").slice(0, 200);
+          }
+
+          order.printClaimedAt = "";
+          writeJson(ORDERS_FILE, orders);
+          return json(res, 200, orderDetail(order));
         }
 
         // =================================================
