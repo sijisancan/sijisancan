@@ -2157,7 +2157,13 @@ const server =
             if((o.printState||"PENDING") === "PRINTED" && !o.printForce) continue;
             const claimed = o.printClaimedAt ? new Date(o.printClaimedAt).getTime() : 0;
             if((o.printState||"") === "CLAIMED" && claimed && now-claimed < 45000) continue;
-            o.printState="CLAIMED"; o.printClaimedAt=new Date().toISOString(); jobs.push(orderDetail(o));
+            o.printState="CLAIMED";
+            o.printClaimedAt=new Date().toISOString();
+            const job = orderDetail(o);
+            job.id = String(o.id || "");
+            job.orderId = job.id;
+            job.createdAt = o.createdAt || job.createdAt || "";
+            if (job.id) jobs.push(job);
             if(jobs.length>=5) break;
           }
           if(jobs.length) writeJson(ORDERS_FILE,orders);
