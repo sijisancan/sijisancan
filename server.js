@@ -2458,16 +2458,47 @@ const server =
             target = bundledFile;
           }
 
-          return fs.readFile(target, (error, data) => {
-            if (error) {
+          // V7.7 低流量修复：菜品图片使用浏览器长期缓存。
+          // 旧版 send() 全局设置 Cache-Control: no-store，导致顾客页面每次刷新菜单时
+          // 都可能重新下载全部菜品照片，是带宽消耗过快的主要原因。
+          // 上传新照片时系统会生成新的文件名，因此 /uploads/ 可以安全使用 immutable 缓存。
+          return fs.stat(target, (statError, stat) => {
+            if (statError || !stat.isFile()) {
               return send(res, 404, "text/plain; charset=utf-8", "Not found");
             }
+
             const ext = path.extname(target).toLowerCase();
             const imageTypes = {
               ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg",
               ".webp":"image/webp", ".gif":"image/gif"
             };
-            return send(res, 200, imageTypes[ext] || "application/octet-stream", data);
+            const contentType = imageTypes[ext] || "application/octet-stream";
+            const etag = '"' + stat.size.toString(16) + '-' + Math.floor(stat.mtimeMs).toString(16) + '"';
+
+            // 浏览器已有相同图片时只返回 304，不再传输图片正文。
+            if (req.headers["if-none-match"] === etag) {
+              res.writeHead(304, {
+                "ETag": etag,
+                "Cache-Control": "public, max-age=2592000, immutable",
+                "Access-Control-Allow-Origin": "*"
+              });
+              return res.end();
+            }
+
+            return fs.readFile(target, (error, data) => {
+              if (error) {
+                return send(res, 404, "text/plain; charset=utf-8", "Not found");
+              }
+              if (res.headersSent) return;
+              res.writeHead(200, {
+                "Content-Type": contentType,
+                "Content-Length": data.length,
+                "ETag": etag,
+                "Cache-Control": "public, max-age=2592000, immutable",
+                "Access-Control-Allow-Origin": "*"
+              });
+              return res.end(data);
+            });
           });
         }
 
