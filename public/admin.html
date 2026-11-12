@@ -3,9 +3,16 @@
 
 .stat.clickable{cursor:pointer;border:2px solid #d8eadf}.stat.clickable:hover{background:#eef8f1}.salesbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.salesbar input{padding:8px 10px;border:1px solid #ccc;border-radius:8px}.salesgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:10px}.salesitem{border:1px solid #e4e4e4;border-radius:10px;padding:10px;background:#fafafa}.salesitem .num{font-size:22px;font-weight:900}.detailcard{border:1px solid #e4e4e4;border-radius:11px;padding:11px;margin:8px 0}.detailhead{display:flex;justify-content:space-between;gap:8px;font-weight:900}.statuspill{display:inline-block;border-radius:12px;padding:3px 7px;font-size:12px;background:#eee}.summaryline{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0;font-weight:800}
 .staffcustom{border:1px solid #ddd;border-radius:12px;padding:10px;margin:8px 0;background:#fafafa}.staffcustom h4{margin:0 0 6px}.staffopt{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #eee}.staffopt:last-child{border-bottom:0}.staffsel{font-size:12px;color:#666;margin-top:4px}
+
+.staffFilterBar{position:sticky;top:-17px;z-index:2;background:#fff;padding:9px 0 7px}
+.staffCatButtons{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.staffCatBtn{border:1px solid #d5ded8;border-radius:9px;padding:8px 11px;background:#f6f8f6;color:#173c2e;font-weight:800;cursor:pointer}
+.staffCatBtn.active{background:#173c2e;color:white;border-color:#173c2e}
+.staffSearch{width:100%;padding:11px;border:1px solid #d5ded8;border-radius:9px}
+.staffSelected{grid-column:1/-1;border-top:2px solid #e0e8e2;margin-top:12px;padding-top:10px}
 </style></head><body><header><div class="brand">四季三餐 · 사계삼찬</div><div class="sub">V7.2.4 营业版｜历史日期修复 · 新单声音增强 · 员工手动点单</div></header><div id="app" class="wrap"></div>
 <div id="menuModal" class="modal"><div class="dialog"><h2 id="modalTitle">菜品设置</h2><input id="eId" type="hidden"><label>中文菜名</label><input id="eName" class="field"><label>韩文菜名</label><input id="eKr" class="field"><div class="row2"><div><label>基础价格（无规格时使用）</label><input id="ePrice" class="field" type="number"></div><div><label>分类</label><input id="eCat" class="field"></div></div><label>Emoji</label><input id="eEmoji" class="field" value="🍽️"><label>菜品图片</label><input id="eImage" class="field" type="file" accept="image/*"><h3>大小份 / 规格</h3><p class="muted">有规格时，顾客必须选择规格；勾选“无限续面”后，该规格可免费追加面。</p><div id="variants"></div><button class="btn blue" onclick="addVariant()">＋ 添加规格</button><h3 style="margin-top:18px">自定义选项 / 추가 옵션</h3><p class="muted">例如：辣度（单选必选）、加粉条/加菜（多选，可设置加价）。</p><div id="optionGroups"></div><button class="btn blue" type="button" onclick="addOptionGroup()">＋ 添加选项组</button><div style="display:flex;gap:8px;margin-top:15px"><button id="saveMenuBtn" class="btn" onclick="saveMenu()">保存</button><button class="btn gray" onclick="closeMenu()">取消</button></div></div></div>
-<div id="staffModal" class="modal"><div class="dialog"><h2>🧾 员工手动点单 / 직원 주문</h2><div class="row2"><div><label>桌号</label><select id="staffTable" class="field"></select></div><div><label>类型</label><select id="staffType" class="field" onchange="staffTypeChanged()"><option value="DINE_IN">堂食 / 매장</option><option value="TAKEOUT">外带 / 포장</option></select></div></div><label>菜品</label><div id="staffMenu" class="staffgrid"></div><label style="display:block;margin-top:12px">备注 / 요청사항</label><textarea id="staffNote" class="field" rows="3" placeholder="例如：不要香菜 / 고수 빼주세요"></textarea><div style="font-size:20px;font-weight:900;margin:10px 0">合计：₩<span id="staffTotal">0</span></div><div style="display:flex;gap:8px"><button id="staffSubmit" class="btn" onclick="submitStaffOrder()">确认下单 / 주문 등록</button><button class="btn gray" onclick="closeStaffOrder()">取消</button></div></div></div>
+<div id="staffModal" class="modal"><div class="dialog"><h2>🧾 员工手动点单 / 직원 주문</h2><div class="row2"><div><label>桌号</label><select id="staffTable" class="field"></select></div><div><label>类型</label><select id="staffType" class="field" onchange="staffTypeChanged()"><option value="DINE_IN">堂食 / 매장</option><option value="TAKEOUT">外带 / 포장</option></select></div></div><div class="staffFilterBar"><label for="staffSearch">查找菜品 / 메뉴 검색</label><input id="staffSearch" class="staffSearch" placeholder="输入中文或韩文菜名 / 메뉴 이름" oninput="renderStaffMenu()"><div id="staffCatButtons" class="staffCatButtons"></div></div><label>菜品</label><div id="staffMenu" class="staffgrid"></div><label style="display:block;margin-top:12px">备注 / 요청사항</label><textarea id="staffNote" class="field" rows="3" placeholder="例如：不要香菜 / 고수 빼주세요"></textarea><div style="font-size:20px;font-weight:900;margin:10px 0">合计：₩<span id="staffTotal">0</span></div><div style="display:flex;gap:8px"><button id="staffSubmit" class="btn" onclick="submitStaffOrder()">确认下单 / 주문 등록</button><button class="btn gray" onclick="closeStaffOrder()">取消</button></div></div></div>
 
 <div id="todayOrdersModal" class="modal"><div class="dialog"><div class="panelhead"><h2>📋 今日订单明细</h2><button class="btn gray" onclick="closeTodayOrders()">关闭</button></div><div id="todayOrdersList"></div></div></div>
 
@@ -18,24 +25,27 @@
   </div>
 </div>
 <script>
-const $=id=>document.getElementById(id), won=n=>Number(n||0).toLocaleString('ko-KR'), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let timer=null,known=new Set(),knownReady=false,soundOn=true,selectedTable=0,menuCache=[],staffCart={},audioCtx=null;
+const $=id=>document.getElementById(id), won=n=>Number(n||0).toLocaleString('ko-KR'), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let timer=null,known=new Set(),knownReady=false,soundOn=true,selectedTable=0,menuCache=[],staffCart={},audioCtx=null,staffCategory="全部";
 async function unlockAudio(){try{if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')await audioCtx.resume();return audioCtx.state==='running'}catch(e){console.warn('audio unlock failed',e);return false}}
 async function beep(){if(!soundOn)return;try{let a=audioCtx||new (window.AudioContext||window.webkitAudioContext)();audioCtx=a;if(a.state==='suspended')await a.resume();let now=a.currentTime;[0,0.22,0.44].forEach((d,i)=>{let o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.setValueAtTime(i===1?1120:900,now+d);g.gain.setValueAtTime(0.0001,now+d);g.gain.exponentialRampToValueAtTime(0.22,now+d+0.015);g.gain.exponentialRampToValueAtTime(0.0001,now+d+0.16);o.start(now+d);o.stop(now+d+0.18)});}catch(e){console.warn('beep failed',e)}}
 async function testSound(){soundOn=true;await unlockAudio();await beep();if(window.soundBtn)soundBtn.textContent='🔊 新单声音：开'}
 function loginView(){clearInterval(timer);app.innerHTML=`<div class="login"><h2>营业后台登录</h2><input id="pw" class="field" type="password" placeholder="后台密码"><button class="btn" onclick="login()">登录</button></div>`}
 async function login(){await unlockAudio();let r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw.value})});if(!r.ok)return alert('密码错误');showApp()}
-async function showApp(){app.innerHTML=`<div id="storageState"></div><div class="toolbar"><button class="btn" onclick="refreshAll()">刷新</button><button class="btn" onclick="openStaffOrder('DINE_IN')">🍽️ 堂食点单</button><button class="btn gold" onclick="openStaffOrder('TAKEOUT')">🥡 打包外带</button><button class="btn gold" onclick="openMenu()">＋ 新增菜品</button><button class="btn blue" onclick="location.href='/history.html'">📜 订单历史</button><button id="soundBtn" class="btn gray" onclick="toggleSound()">🔊 新单声音：开</button><button class="btn gray" onclick="testSound()">🔔 测试声音</button><button class="btn gray" onclick="logout()">退出</button></div><div id="stats" class="stats"></div><div class="panel"><div class="panelhead"><h3>📊 菜品销量统计</h3><span class="muted">按已结账订单统计实际销量</span></div><div class="salesbar"><label>日期 <input id="salesDate" type="date"></label><button class="btn blue" onclick="loadSalesStats()">查询销量</button><span id="salesTotals" class="muted"></span></div><div id="salesList" class="salesgrid"></div></div><div class="panel"><div class="panelhead"><h3>🪑 20桌实时状态</h3><span class="muted">点击桌号可筛选；红=新单 黄=制作中 绿=完成待结账</span></div><div id="tables" class="tables"></div></div><div class="panel"><div class="panelhead"><h3>正在制作</h3><span class="muted">完成后自动从这里消失</span></div><div id="orders" class="orders"></div></div><div class="panel"><div class="panelhead"><h3>✅ 已完成 · 待结账</h3><span class="muted">结账后进入历史记录</span></div><div id="doneOrders" class="orders"></div></div><div class="panel"><div class="panelhead"><h3>菜单管理</h3><span class="muted">支持大小份、不同价格、无限续面、售罄和图片</span></div><div id="menus"></div></div><details class="panel"><summary><b>20张桌子二维码</b></summary><div id="qrs" class="qrs"></div></details>`;for(let i=1;i<=20;i++)qrs.innerHTML+=`<div><img src="/api/qr?table=${i}"><br><b>${i}号桌</b></div>`;salesDate.value=koreaToday();await refreshAll();await loadSalesStats();checkStorage();clearInterval(timer);timer=setInterval(refreshOrders,3000)}
+async function showApp(){app.innerHTML=`<div id="storageState"></div><div class="toolbar"><button class="btn" onclick="refreshAll()">刷新</button><button class="btn" onclick="openStaffOrder('DINE_IN')">🍽️ 堂食点单</button><button class="btn gold" onclick="openStaffOrder('TAKEOUT')">🥡 打包外带</button><button class="btn gold" onclick="openMenu()">＋ 新增菜品</button><button class="btn blue" onclick="location.href='/history.html'">📜 订单历史</button><button id="soundBtn" class="btn gray" onclick="toggleSound()">🔊 新单声音：开</button><button class="btn gray" onclick="testSound()">🔔 测试声音</button><button class="btn gray" onclick="logout()">退出</button></div><div id="stats" class="stats"></div><div class="panel"><div class="panelhead"><h3>📊 菜品销量统计</h3><span class="muted">按已结账订单统计实际销量</span></div><div class="salesbar"><label>日期 <input id="salesDate" type="date"></label><button class="btn blue" onclick="loadSalesStats()">查询销量</button><span id="salesTotals" class="muted"></span></div><div id="salesList" class="salesgrid"></div></div><div class="panel"><div class="panelhead"><h3>🪑 20桌实时状态</h3><span class="muted">点击桌号可筛选；红=新单 黄=制作中 绿=完成待结账</span></div><div id="tables" class="tables"></div></div><div class="panel"><div class="panelhead"><h3>正在制作</h3><span class="muted">完成后自动从这里消失</span></div><div id="orders" class="orders"></div></div><div class="panel"><div class="panelhead"><h3>✅ 已完成 · 待结账</h3><span class="muted">结账后进入历史记录</span></div><div id="doneOrders" class="orders"></div></div><div class="panel"><div class="panelhead"><h3>菜单管理</h3><span class="muted">支持大小份、不同价格、无限续面、售罄和图片</span></div><div id="menus"></div></div><details class="panel"><summary><b>1～6号桌二维码</b></summary><div id="qrs" class="qrs"></div></details>`;for(let i=1;i<=6;i++)qrs.innerHTML+=`<div><img src="/api/qr?table=${i}"><br><b>${i}号桌</b></div>`;salesDate.value=koreaToday();await refreshAll();await loadSalesStats();checkStorage();clearInterval(timer);timer=setInterval(refreshOrders,3000)}
 async function checkStorage(){try{let r=await fetch('/api/storage-status');if(!r.ok)return;let d=await r.json();let el=$('storageState');if(!el)return;el.className=d.persistent?'storageok':'storagewarn';el.innerHTML=d.persistent?'✅ <b>数据持久化目录已启用</b>：菜单、价格、订单和新上传照片会写入持久磁盘。':'⚠️ <b>当前没有启用持久磁盘。</b> 菜单、价格和新照片在 Render 重启/重新部署后仍可能丢失。请按 V7 部署说明设置 Persistent Disk 和 DATA_DIR。'}catch{}}
 
 function staffTypeChanged(){staffTable.disabled=staffType.value==='TAKEOUT'}
 async function openStaffOrder(mode='DINE_IN'){
   if(!menuCache.length)await loadMenu();
   staffCart={};
+  staffCategory="全部";
+  staffSearch.value="";
   staffTable.innerHTML=Array.from({length:20},(_,i)=>`<option value="${i+1}">${i+1}号桌</option>`).join('');
   staffTable.value=selectedTable||1;
   staffType.value=mode==='TAKEOUT'?'TAKEOUT':'DINE_IN';
   staffTable.disabled=staffType.value==='TAKEOUT';
   staffNote.value='';
+  renderStaffCategories();
   renderStaffMenu();
   staffModal.style.display='flex'
 }
@@ -45,9 +55,23 @@ function staffItemLabel(x){
   let opt=x.options?.length?'<div class="staffsel">'+x.options.map(o=>esc(o.groupName)+'：'+esc(o.name)+(o.price?' +₩'+won(o.price):'')).join(' / ')+'</div>':'';
   return base+opt
 }
+const staffPreferredCats=['主食','面类','饺子','小吃','凉菜','饮料','酒水','其他'];
+function staffCategoryOf(x){return String(x.category||'未分类').trim()||'未分类'}
+function renderStaffCategories(){
+  const found=[...new Set(menuCache.filter(x=>x.on!==false).map(staffCategoryOf))];
+  const cats=['全部',...staffPreferredCats.filter(c=>found.includes(c)),...found.filter(c=>!staffPreferredCats.includes(c))];
+  if(!cats.includes(staffCategory))staffCategory='全部';
+  staffCatButtons.innerHTML=cats.map((c,i)=>`<button type="button" class="staffCatBtn ${staffCategory===c?'active':''}" onclick="selectStaffCategory(${i})">${esc(c)}</button>`).join('');
+  window.staffAvailableCategories=cats;
+}
+function selectStaffCategory(index){
+  staffCategory=window.staffAvailableCategories?.[index]||'全部';
+  renderStaffCategories();renderStaffMenu();
+}
 function renderStaffMenu(){
   let rows=[];
-  menuCache.filter(x=>x.on!==false).forEach(x=>{
+   const keyword=(staffSearch.value||'').trim().toLowerCase();
+  menuCache.filter(x=>x.on!==false&&(staffCategory==='全部'||staffCategoryOf(x)===staffCategory)&&(!keyword||[x.name,x.kr,x.category].some(v=>String(v||'').toLowerCase().includes(keyword)))).forEach(x=>{
     let hasOpts=Array.isArray(x.optionGroups)&&x.optionGroups.length;
     let hasVars=Array.isArray(x.variants)&&x.variants.length;
     if(hasOpts){
@@ -61,7 +85,7 @@ function renderStaffMenu(){
     }
   });
   let selected=Object.entries(staffCart).map(([k,x])=>`<div class="staffitem"><b>${staffItemLabel(x)}</b><br>₩${won(x.price)} × ${x.qty}<div class="staffqty"><button onclick="staffAdjustKey('${encodeURIComponent(k)}',-1)">−</button><b>${x.qty}</b><button onclick="staffAdjustKey('${encodeURIComponent(k)}',1)">＋</button></div></div>`).join('');
-  staffMenu.innerHTML=(rows.join('')||'<p>没有可售菜品</p>')+(selected?`<h3 style="margin-top:15px">已选菜品</h3>${selected}`:'');
+   staffMenu.innerHTML=(rows.join('')||'<p>该分类没有匹配的在售菜品</p>')+(selected?`<div class="staffSelected"><h3 style="margin-top:0">已选菜品（切换分类不会清空）</h3><div class="staffgrid">${selected}</div></div>`:'');
   staffCalc()
 }
 function staffChange(id,vid,delta){
